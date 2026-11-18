@@ -18,8 +18,8 @@
   #map{position:fixed;inset:0}
 
   /* Top header card */
-  .header{position:fixed;z-index:1000;top:max(12px,env(safe-area-inset-top));left:12px;right:12px;
-    background:rgba(255,255,255,.95);border-radius:18px;height:62px;padding:10px 14px;
+  .header{position:fixed;z-index:1000;top:max(12px,env(safe-area-inset-top));left:12px;right:12px;height:62px;
+    background:rgba(255,255,255,.95);border-radius:18px;padding:10px 14px;
     box-shadow:0 4px 18px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:space-between;gap:10px}
   .brand{font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--evergreen);font-size:17px;line-height:1.1}
   .brand small{display:block;color:var(--santa);font-size:12px;letter-spacing:.08em}
@@ -38,11 +38,20 @@
     background:rgba(255,255,255,.96) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%231d2a22'/%3E%3C/svg%3E") no-repeat right 10px center}
   select.chip.on{background-color:var(--evergreen);color:#fff}
 
+  /* Bottom tab bar */
+  .tabbar{position:fixed;z-index:1050;left:50%;transform:translateX(-50%);
+    bottom:max(14px,env(safe-area-inset-bottom));display:flex;gap:6px;
+    background:rgba(255,255,255,.92);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+    border-radius:999px;padding:6px;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+  .tab{border:0;background:transparent;border-radius:999px;padding:10px 18px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;color:var(--ink);white-space:nowrap}
+  .tab.on{background:var(--evergreen);color:#fff}
+
   /* Map pins */
   .pin{position:relative;width:34px;height:34px}
   .pin-dot{width:30px;height:30px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)}
   .pin-elf{position:absolute;right:-6px;top:-8px;width:20px;height:20px;border-radius:50%;background:var(--sunshine);
     font-size:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+  .pin-elf.found{background:var(--evergreen);color:#fff;font-weight:700;font-size:12px}
   .pin-label{position:absolute;left:40px;top:50%;transform:translateY(-50%);white-space:nowrap;
     background:rgba(255,255,255,.8);border-radius:8px;padding:2px 6px;font-size:12px;font-weight:700;
     box-shadow:0 1px 4px rgba(0,0,0,.2);display:none;pointer-events:none;color:var(--ink)}
@@ -52,11 +61,12 @@
     display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
   .cluster.big{background:var(--santa)}
 
-  /* Bottom sheet */
+  /* Sheets (business card and Elf Hunt tab) */
   .sheet{position:fixed;left:0;right:0;bottom:0;z-index:1100;background:#fff;border-radius:22px 22px 0 0;
     box-shadow:0 -10px 30px rgba(0,0,0,.2);transform:translateY(110%);
     transition:transform .38s cubic-bezier(.32,.72,0,1);max-height:46vh;overflow:auto;
     padding:10px 18px calc(18px + env(safe-area-inset-bottom))}
+  .sheet.tall{max-height:80vh}
   .sheet.open{transform:translateY(0)}
   .grab{width:42px;height:5px;border-radius:3px;background:#d4dbd6;margin:0 auto 10px}
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;font-size:14px}
@@ -65,15 +75,36 @@
   .cat{color:var(--muted);font-size:13px}
   .name{font-size:24px;font-weight:700;margin:8px 0 2px;line-height:1.15}
   .elfbadge{background:var(--sunshine);border-radius:999px;padding:3px 10px;font-weight:700;font-size:13px}
+  .turnin{display:inline-block;background:var(--santa);color:#fff;border-radius:999px;padding:3px 10px;font-weight:700;font-size:12px}
   .promo{background:#f4f8f2;border-radius:14px;padding:10px 12px;font-size:14px;line-height:1.4;margin-top:10px;white-space:pre-line}
   .actions{display:flex;gap:8px;margin-top:14px;align-items:stretch}
   .btn{flex:1;border:0;border-radius:14px;padding:12px;font-weight:700;font-size:15px;text-align:center;
-    text-decoration:none;cursor:pointer;color:var(--ink);background:#eef3ef;font-family:inherit}
+    text-decoration:none;cursor:pointer;color:var(--ink);background:#eef3ef;font-family:inherit;display:inline-block}
   .btn.primary{background:var(--evergreen);color:#fff}
+  .btn.small{flex:none;padding:10px 12px;font-size:14px}
   .heart{width:50px;height:50px;border-radius:50%;border:0;background:#fff0f6;font-size:24px;cursor:pointer;flex:none}
   .bounce{animation:bounce .45s}
   @keyframes bounce{0%{transform:scale(1)}35%{transform:scale(1.35)}65%{transform:scale(.9)}100%{transform:scale(1)}}
   @media (prefers-reduced-motion: reduce){.sheet{transition:none}.bounce{animation:none}}
+
+  /* Elf Hunt tab */
+  .notice{background:#fff7d6;border-radius:14px;padding:10px 12px;font-size:14px;line-height:1.4;margin-top:10px}
+  .notice summary{cursor:pointer;font-weight:700}
+  .notice p{margin:8px 0 0}
+  .small{font-size:12px;color:var(--muted)}
+  .progress{height:10px;border-radius:999px;background:#e6efe8;overflow:hidden;margin-top:8px}
+  .progress>div{height:100%;background:linear-gradient(90deg,var(--evergreen),var(--grinchy));transition:width .4s}
+  .seg{display:flex;background:#eef3ef;border-radius:999px;padding:3px;margin-top:12px}
+  .seg button{flex:1;border:0;background:transparent;padding:7px 4px;border-radius:999px;font-family:inherit;font-size:13px;font-weight:700;color:var(--ink);cursor:pointer}
+  .seg button.on{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+  .elflist{margin-top:6px}
+  .elfrow{border-top:1px solid #eef2ee;padding:12px 0}
+  .elfrow .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+  .elfname{font-weight:700;font-size:16px;line-height:1.2}
+  .entry{display:flex;gap:6px;margin-top:8px}
+  .entry input{flex:1;min-width:0;border:1px solid #d4dbd6;border-radius:12px;padding:10px;font-family:inherit;font-size:15px;color:var(--ink)}
+  .found-tag{color:var(--evergreen);font-weight:700;font-size:13px}
+  .empty{color:var(--muted);font-size:14px;padding:16px 0;text-align:center}
 </style>
 </head>
 <body>
@@ -91,6 +122,12 @@
 </div>
 
 <div class="sheet" id="sheet" aria-live="polite"></div>
+<div class="sheet tall" id="elfSheet" aria-live="polite"></div>
+
+<nav class="tabbar">
+  <button class="tab on" id="tabMap">🗺 Map</button>
+  <button class="tab" id="tabElf">🧝 Elf Hunt <span id="elfCount"></span></button>
+</nav>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
@@ -106,13 +143,20 @@ const CONFIG = {
   center: [42.9575, -85.6410],
   zoom: 14,
   labelZoom: 16,          // business names appear at this zoom and closer
+  refreshMinutes: 5,
   // Categories offered in the dropdown (rows with other values still show on the map)
   categories: ["Clothing", "Foodie", "Pamper", "Trinket & Home Improvement", "Event"],
-  refreshMinutes: 5,
+  elf: {
+    goal: 20,                                  // names needed to turn in
+    dates: "Nov 19 – Dec 18",
+    turnIn: ["Sticky Fingers", "Vintage Charm"], // used if the sheet has no "Elf Turn-In" column
+    email: "events@uptowngr.com",
+  },
 };
 
 const CACHE_KEY = "shophop.businesses.v1";
 const FAV_KEY = "shophop.favs.v1";
+const ELF_KEY = "shophop.elves.v1";
 
 // District brand colors (pin fill, pill, and chip when selected)
 const DISTRICTS = {
@@ -199,6 +243,7 @@ function toBusinesses(rows) {
     district: find("district"),
     category: find("category"),
     elf: find("elf hunt"),
+    turnIn: find("elf turn-in", "turn-in", "turn in"),
     hours: find("hours"),
     promo: find("event or promotion", "event / promotion", "event"),
     sponsor: find("sponsor"),
@@ -225,6 +270,8 @@ function toBusinesses(rows) {
       district: normDistrict(get(idx.district)),
       category: get(idx.category) || "Other",
       elf: /^y/i.test(get(idx.elf)),
+      turnIn: /^y/i.test(get(idx.turnIn)) ||
+              CONFIG.elf.turnIn.some(t => t.toLowerCase() === name.toLowerCase()),
       hours: get(idx.hours),
       hasEvent: /^yes$/i.test(promoRaw) || (!isFlag && promoRaw !== ""),
       promo: isFlag ? "" : promoRaw,
@@ -255,7 +302,7 @@ async function loadBusinesses() {
 }
 
 /* ----------------------------------------------------------
-   Favorites
+   Favorites and Elf Hunt progress (saved on this device only)
    ---------------------------------------------------------- */
 function getFavs() {
   try { return new Set(JSON.parse(localStorage.getItem(FAV_KEY) || "[]")); }
@@ -265,9 +312,26 @@ function saveFavs(set) {
   try { localStorage.setItem(FAV_KEY, JSON.stringify([...set])); } catch (e) {}
 }
 
+// { businessId: "elf name" }
+function getElves() {
+  try { return JSON.parse(localStorage.getItem(ELF_KEY) || "{}"); }
+  catch (e) { return {}; }
+}
+function saveElves(obj) {
+  try { localStorage.setItem(ELF_KEY, JSON.stringify(obj)); } catch (e) {}
+}
+
 /* ----------------------------------------------------------
    Map
    ---------------------------------------------------------- */
+// Two-pin clusters: stack them above and below instead of side by side.
+// Three or more keep the default spread.
+const _circleLayoutOriginal = L.MarkerCluster.prototype._generatePointsCircle;
+L.MarkerCluster.prototype._generatePointsCircle = function (count, centerPt) {
+  this._circleStartAngle = count === 2 ? Math.PI / 2 : 0;
+  return _circleLayoutOriginal.call(this, count, centerPt);
+};
+
 const map = L.map("map", { zoomControl: false }).setView(CONFIG.center, CONFIG.zoom);
 L.control.zoom({ position: "bottomright" }).addTo(map);
 L.tileLayer(CONFIG.tiles, { tileSize: 256, maxZoom: 19, attribution: CONFIG.attribution }).addTo(map);
@@ -293,32 +357,18 @@ map.on("zoomend", updateLabelMode);
 map.on("zoomend moveend", () => setTimeout(updateLabelCollisions, 60));
 updateLabelMode();
 
-function pinIcon(b) {
+function pinIcon(b, elves) {
   const c = colorFor(b.district);
+  let badge = "";
+  if (b.elf) badge = elves[b.id] ? '<span class="pin-elf found">✓</span>' : '<span class="pin-elf">🧝</span>';
   return L.divIcon({
     className: "", iconSize: [34, 34], iconAnchor: [17, 17],
     html: `<div class="pin">
              <div class="pin-dot" style="background:${c.color}"></div>
-             ${b.elf ? '<span class="pin-elf">🧝</span>' : ""}
+             ${badge}
              <span class="pin-label">${esc(b.name)}</span>
            </div>`,
   });
-}
-
-/* ----------------------------------------------------------
-   Filters: district and category (single choice), plus
-   Elf Hunt, Events, and Favorites toggles (combine with AND)
-   ---------------------------------------------------------- */
-const filterState = { district: "All", category: "All", elf: false, events: false, favOnly: false };
-let businesses = [];
-
-function passes(b) {
-  const favs = getFavs();
-  return (filterState.district === "All" || b.district === filterState.district) &&
-         (filterState.category === "All" || b.category === filterState.category) &&
-         (!filterState.elf || b.elf) &&
-         (!filterState.events || b.hasEvent) &&
-         (!filterState.favOnly || favs.has(b.id));
 }
 
 // Hide business names that would overlap a name already on screen (zoomed in only)
@@ -345,14 +395,31 @@ function updateLabelCollisions() {
   }
 }
 
+/* ----------------------------------------------------------
+   Filters: district and category (single choice), plus
+   Elf Hunt, Events, and Favorites toggles (combine with AND)
+   ---------------------------------------------------------- */
+const filterState = { district: "All", category: "All", elf: false, events: false, favOnly: false };
+let businesses = [];
+
+function passes(b) {
+  const favs = getFavs();
+  return (filterState.district === "All" || b.district === filterState.district) &&
+         (filterState.category === "All" || b.category === filterState.category) &&
+         (!filterState.elf || b.elf) &&
+         (!filterState.events || b.hasEvent) &&
+         (!filterState.favOnly || favs.has(b.id));
+}
+
 function applyFilters(fit) {
   cluster.clearLayers();
+  const elves = getElves();
   const shown = businesses.filter(passes);
   const markers = [];
   let unplaced = 0;
   for (const b of shown) {
     if (b.lat == null) { unplaced++; continue; }
-    const m = L.marker([b.lat, b.lng], { icon: pinIcon(b), title: b.name, keyboard: true });
+    const m = L.marker([b.lat, b.lng], { icon: pinIcon(b, elves), title: b.name, keyboard: true });
     m.on("click", () => openSheet(b));
     markers.push(m);
   }
@@ -360,6 +427,7 @@ function applyFilters(fit) {
   if (fit && markers.length) map.fitBounds(L.featureGroup(markers).getBounds().pad(0.15));
   updateStatus(shown.length, unplaced);
   updateChipCounts();
+  updateTabLabel();
   setTimeout(updateLabelCollisions, 400);   // give clusters time to finish animating
 }
 
@@ -423,9 +491,8 @@ function buildFilters() {
   const sel = document.createElement("select");
   sel.className = "chip" + (filterState.category !== "All" ? " on" : "");
   sel.setAttribute("aria-label", "Filter by category");
-  const cats = CONFIG.categories;
   sel.innerHTML = `<option value="All">All categories</option>` +
-    cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+    CONFIG.categories.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
   sel.value = filterState.category;
   sel.onchange = () => { filterState.category = sel.value; buildFilters(); applyFilters(true); };
   tc.appendChild(sel);
@@ -433,11 +500,10 @@ function buildFilters() {
 
 // Show counts on the toggle chips (kept in sync with the data and favorites)
 function updateChipCounts() {
-  const favs = getFavs();
   const counts = {
     "🧝 Elf Hunt": businesses.filter(b => b.elf).length,
     "🎉 Events": businesses.filter(b => b.hasEvent).length,
-    "❤️ Favorites": favs.size,
+    "❤️ Favorites": getFavs().size,
   };
   for (const btn of $("#toggleChips").querySelectorAll("button.chip")) {
     const base = btn.textContent.replace(/\s*\(\d+\)$/, "");
@@ -451,16 +517,31 @@ function focusDistrict(d) {
   if (pts.length) map.flyToBounds(pts, { padding: [140, 40], maxZoom: 16 });
 }
 
-function render(list) {
-  businesses = list;
-  buildFilters();
-  applyFilters(false);
+/* ----------------------------------------------------------
+   Business card
+   ---------------------------------------------------------- */
+let currentBusiness = null;
+
+function elfSection(b) {
+  if (!b.elf && !b.turnIn) return "";
+  const name = getElves()[b.id] || "";
+  let html = "";
+  if (b.turnIn) {
+    html += `<div class="row"><span class="turnin">🧝 Elf Hunt turn-in spot</span></div>
+             <div class="cat">Bring your completed game card here for your prize and drawing entry.</div>`;
+  }
+  if (b.elf) {
+    html += `<div class="entry">
+               <input id="elfName" maxlength="40" placeholder="Name of the elf you found" value="${esc(name)}">
+               <button class="btn primary small" id="saveElf">${name ? "Update" : "Found it!"}</button>
+             </div>`;
+    if (name) html += `<div class="row found-tag">✓ Saved on this phone</div>`;
+  }
+  return html;
 }
 
-/* ----------------------------------------------------------
-   Bottom sheet
-   ---------------------------------------------------------- */
 function openSheet(b) {
+  currentBusiness = b;
   const isFav = getFavs().has(b.id);
   const c = colorFor(b.district);
   const sheet = $("#sheet");
@@ -476,6 +557,7 @@ function openSheet(b) {
     ${b.address ? `<div class="row">📍 ${esc(b.address)}</div>` : ""}
     ${b.promo ? `<div class="promo">${esc(b.promo)}</div>`
       : b.hasEvent ? `<div class="promo">✨ Shop Hop special happening here. Details coming soon.</div>` : ""}
+    ${elfSection(b)}
     <div class="actions">
       <button class="heart" id="fav" aria-label="Save to favorites">${isFav ? "❤️" : "🤍"}</button>
       ${b.lat != null ? `<a class="btn primary" target="_blank" rel="noopener"
@@ -484,12 +566,16 @@ function openSheet(b) {
     </div>`;
   $("#fav").onclick = () => toggleFav(b);
   $("#close").onclick = closeSheet;
+  if ($("#saveElf")) $("#saveElf").onclick = () => markElf(b, $("#elfName").value);
   sheet.scrollTop = 0;
   sheet.classList.add("open");
   if (b.lat != null) map.panTo([b.lat, b.lng]);
 }
 
-function closeSheet() { $("#sheet").classList.remove("open"); }
+function closeSheet() {
+  $("#sheet").classList.remove("open");
+  currentBusiness = null;
+}
 
 function toggleFav(b) {
   const favs = getFavs();
@@ -503,15 +589,168 @@ function toggleFav(b) {
   else updateChipCounts();
 }
 
-// Swipe down on the sheet to close it (only when scrolled to the top)
-let touchStartY = null;
-$("#sheet").addEventListener("touchstart", e => { touchStartY = e.touches[0].clientY; }, { passive: true });
-$("#sheet").addEventListener("touchend", e => {
-  if (touchStartY != null && $("#sheet").scrollTop === 0 &&
-      e.changedTouches[0].clientY - touchStartY > 60) closeSheet();
-  touchStartY = null;
+/* ----------------------------------------------------------
+   Elf Hunt: saving names, progress, and the tab
+   ---------------------------------------------------------- */
+let elfView = { district: "All", view: "all" };   // view: all | todo | found
+
+function markElf(b, value) {
+  const names = getElves();
+  const clean = String(value || "").trim().slice(0, 40);
+  if (clean) names[b.id] = clean; else delete names[b.id];
+  saveElves(names);
+  if (currentBusiness === b) openSheet(b);     // refresh the card
+  applyFilters(false);                          // refresh pins (checkmarks)
+  if ($("#elfSheet").classList.contains("open") && document.activeElement?.tagName !== "INPUT") renderElfList();
+}
+
+function setTab(which) {
+  $("#tabMap").classList.toggle("on", which === "map");
+  $("#tabElf").classList.toggle("on", which === "elf");
+}
+
+function updateTabLabel() {
+  const names = getElves();
+  const got = businesses.filter(b => b.elf && names[b.id]).length;
+  $("#elfCount").textContent = `${got}/${CONFIG.elf.goal}`;
+}
+
+function openElfSheet() {
+  closeSheet();
+  renderElfList();
+  $("#elfSheet").classList.add("open");
+  setTab("elf");
+}
+
+function closeElfSheet() {
+  $("#elfSheet").classList.remove("open");
+  setTab("map");
+}
+
+function renderElfList() {
+  const names = getElves();
+  const all = businesses.filter(b => b.elf);
+  const got = all.filter(b => names[b.id]);
+  const goal = CONFIG.elf.goal;
+  const pct = Math.min(100, (got.length / goal) * 100);
+  const ready = got.length >= goal;
+
+  const list = all
+    .filter(b => elfView.district === "All" || b.district === elfView.district)
+    .filter(b => elfView.view === "all" || (elfView.view === "found") === !!names[b.id])
+    .sort((a, b) => a.district.localeCompare(b.district) || a.name.localeCompare(b.name));
+
+  const listText = got.map((b, i) => `${i + 1}. ${names[b.id]}`).join("\n");
+  const mailBody = encodeURIComponent(`Shop Hop Elf Hunt entries\n\n${listText}\n\nName:\nPhone:`);
+  const mailto = `mailto:${CONFIG.elf.email}?subject=${encodeURIComponent("Shop Hop Elf Hunt entries")}&body=${mailBody}`;
+
+  const countFor = v => all.filter(b => v === "all" || (v === "found") === !!names[b.id]).length;
+  const seg = [["all", "All"], ["todo", "To find"], ["found", "Found"]]
+    .map(([v, label]) => `<button data-view="${v}" class="${elfView.view === v ? "on" : ""}">${label} (${countFor(v)})</button>`)
+    .join("");
+
+  const chips = ["All", ...DISTRICT_ORDER].map(d => {
+    const on = elfView.district === d;
+    const c = d === "All" ? null : colorFor(d);
+    const style = on && c ? `background:${c.color};color:${c.text}` : "";
+    return `<button class="chip ${on ? "on" : ""}" data-district-filter="${d}" style="${style}">${d === "All" ? "All districts" : esc(d)}</button>`;
+  }).join("");
+
+  const rows = list.length ? list.map(b => {
+    const c = colorFor(b.district);
+    const saved = names[b.id] || "";
+    return `
+      <div class="elfrow">
+        <div class="top">
+          <div>
+            <div class="elfname">${esc(b.name)}</div>
+            <div class="row" style="margin-top:4px">
+              <span class="pill" style="background:${c.color};color:${c.text}">${esc(b.district)}</span>
+              ${b.turnIn ? '<span class="turnin">Turn-in spot</span>' : ""}
+            </div>
+          </div>
+          <button class="btn small" data-locate="${b.id}">📍 Locate</button>
+        </div>
+        <div class="entry">
+          <input data-elf="${b.id}" maxlength="40" placeholder="Elf's name" value="${esc(saved)}">
+          <button class="btn primary small" data-save="${b.id}">${saved ? "Update" : "Save"}</button>
+        </div>
+        ${saved ? '<div class="found-tag">✓ Found</div>' : ""}
+      </div>`;
+  }).join("") : `<div class="empty">Nothing here yet. Try another filter.</div>`;
+
+  $("#elfSheet").innerHTML = `
+    <div class="grab"></div>
+    <div class="name">🧝 Elf Hunt</div>
+    <details class="notice" open>
+      <summary>How it works · ${esc(CONFIG.elf.dates)}</summary>
+      <p>Find the elves hiding in participating shop windows, and write each elf's name on your paper game card. Collect ${goal} names.</p>
+      <p>Turn in your completed card at <b>${CONFIG.elf.turnIn.join("</b> or <b>")}</b> for a small prize. Entries completed by Dec 18 are also entered into a drawing for one of five $150 gift cards to an Uptown business of your choice.</p>
+      <p class="small">Your progress is saved on this phone only. If you switch phones or clear your browser, it will be lost.</p>
+    </details>
+
+    <div class="row" style="margin-top:12px"><b>${got.length} of ${goal} names</b>${ready ? " · 🎉 Ready to turn in!" : ""}</div>
+    <div class="progress"><div style="width:${pct}%"></div></div>
+    ${ready ? `<div class="actions">
+        <a class="btn primary" href="${mailto}">Email my list</a>
+        <button class="btn" id="copyList">Copy list</button>
+      </div>` : ""}
+
+    <div class="seg" id="elfSeg">${seg}</div>
+    <div class="chips" style="padding-left:0">${chips}</div>
+    <div class="elflist">${rows}</div>`;
+}
+
+// One place to handle taps inside the Elf Hunt tab
+$("#elfSheet").addEventListener("click", e => {
+  const t = e.target.closest("button, a");
+  if (!t) return;
+  if (t.dataset.view) { elfView.view = t.dataset.view; renderElfList(); return; }
+  if (t.dataset.districtFilter) {
+    elfView.district = t.dataset.districtFilter; renderElfList(); return;
+  }
+  if (t.dataset.save) {
+    const b = businesses.find(x => x.id === t.dataset.save);
+    const input = document.querySelector(`[data-elf="${t.dataset.save}"]`);
+    if (b && input) markElf(b, input.value);
+    renderElfList();
+    return;
+  }
+  if (t.dataset.locate) {
+    const b = businesses.find(x => x.id === t.dataset.locate);
+    if (!b) return;
+    closeElfSheet();
+    if (b.lat != null) map.flyTo([b.lat, b.lng], Math.max(map.getZoom(), 17));
+    openSheet(b);
+    return;
+  }
+  if (t.id === "copyList") {
+    const names = getElves();
+    const text = businesses.filter(b => b.elf && names[b.id]).map((b, i) => `${i + 1}. ${names[b.id]}`).join("\n");
+    navigator.clipboard.writeText(text)
+      .then(() => { t.textContent = "Copied!"; })
+      .catch(() => { t.textContent = "Couldn't copy"; });
+  }
 });
+
+/* ----------------------------------------------------------
+   Sheet interactions: tap the map to close the card,
+   swipe down to close either sheet
+   ---------------------------------------------------------- */
+function addSwipeToClose(el, onClose) {
+  let startY = null;
+  el.addEventListener("touchstart", e => { startY = e.touches[0].clientY; }, { passive: true });
+  el.addEventListener("touchend", e => {
+    if (startY != null && el.scrollTop === 0 && e.changedTouches[0].clientY - startY > 60) onClose();
+    startY = null;
+  });
+}
+addSwipeToClose($("#sheet"), closeSheet);
+addSwipeToClose($("#elfSheet"), closeElfSheet);
 map.on("click", closeSheet);
+
+$("#tabMap").onclick = () => { closeElfSheet(); closeSheet(); };
+$("#tabElf").onclick = () => openElfSheet();
 
 /* ----------------------------------------------------------
    Startup + periodic refresh from the sheet
@@ -523,11 +762,11 @@ async function init() {
     $("#status").textContent = "Couldn't load shops. Check your connection and refresh.";
     return;
   }
-  const sourceNote = source === "live" ? "live" : "saved copy";
   businesses = list;
   buildFilters();
   applyFilters(firstLoad);
-  $("#status").textContent += ` · ${sourceNote}`;
+  $("#status").textContent += ` · ${source === "live" ? "live" : "saved copy"}`;
+  if ($("#elfSheet").classList.contains("open") && document.activeElement?.tagName !== "INPUT") renderElfList();
   firstLoad = false;
 }
 
