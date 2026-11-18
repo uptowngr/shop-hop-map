@@ -19,18 +19,18 @@
 
   /* Top header card */
   .header{position:fixed;z-index:1000;top:max(12px,env(safe-area-inset-top));left:12px;right:12px;
-    background:rgba(255,255,255,.95);border-radius:18px;padding:10px 14px;
+    background:rgba(255,255,255,.95);border-radius:18px;height:62px;padding:10px 14px;
     box-shadow:0 4px 18px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:space-between;gap:10px}
   .brand{font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--evergreen);font-size:17px;line-height:1.1}
   .brand small{display:block;color:var(--santa);font-size:12px;letter-spacing:.08em}
   .status{font-size:12px;color:var(--muted);text-align:right;line-height:1.3}
 
   /* Filter bar */
-  .filters{position:fixed;z-index:1000;left:12px;right:12px;top:calc(max(12px,env(safe-area-inset-top)) + 70px);
+  .filters{position:fixed;z-index:1000;left:12px;right:12px;top:calc(max(12px,env(safe-area-inset-top)) + 82px);
     display:flex;flex-direction:column;gap:6px}
   .chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 4px}
   .chips::-webkit-scrollbar{display:none}
-  .chip{flex:none;border:0;border-radius:999px;padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer;
+  .chip{flex:none;height:34px;display:inline-flex;align-items:center;border:0;border-radius:999px;padding:0 14px;font-size:13px;font-weight:700;cursor:pointer;
     background:rgba(255,255,255,.96);color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.12);font-family:inherit;white-space:nowrap}
   .chip.on{background:var(--evergreen);color:#fff}
   .chip.on[data-district]{background:var(--dcolor);color:var(--dtext)}
@@ -44,9 +44,10 @@
   .pin-elf{position:absolute;right:-6px;top:-8px;width:20px;height:20px;border-radius:50%;background:var(--sunshine);
     font-size:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.25)}
   .pin-label{position:absolute;left:40px;top:50%;transform:translateY(-50%);white-space:nowrap;
-    background:rgba(255,255,255,.95);border-radius:8px;padding:2px 6px;font-size:12px;font-weight:700;
+    background:rgba(255,255,255,.98);border-radius:8px;padding:2px 6px;font-size:12px;font-weight:700;
     box-shadow:0 1px 4px rgba(0,0,0,.2);display:none;pointer-events:none;color:var(--ink)}
   #map.show-labels .pin-label{display:block}
+  #map .pin-label.hidden{display:none}
   .cluster{width:42px;height:42px;border-radius:50%;background:var(--evergreen);color:#fff;border:3px solid #fff;
     display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
   .cluster.big{background:var(--santa)}
@@ -105,6 +106,8 @@ const CONFIG = {
   center: [42.9575, -85.6410],
   zoom: 14,
   labelZoom: 16,          // business names appear at this zoom and closer
+  // Categories offered in the dropdown (rows with other values still show on the map)
+  categories: ["Clothing", "Foodie", "Pamper", "Trinket & Home Improvement", "Event"],
   refreshMinutes: 5,
 };
 
@@ -287,6 +290,7 @@ function updateLabelMode() {
   document.getElementById("map").classList.toggle("show-labels", map.getZoom() >= CONFIG.labelZoom);
 }
 map.on("zoomend", updateLabelMode);
+map.on("zoomend moveend", () => setTimeout(updateLabelCollisions, 60));
 updateLabelMode();
 
 function pinIcon(b) {
@@ -317,14 +321,59 @@ function passes(b) {
          (!filterState.favOnly || favs.has(b.id));
 }
 
+// Nudge businesses that sit on (or almost on) the same spot into a small ring (~10–20 m).
+// Directions and the card still use the real coordinates.
+function spreadPins(list) {
+  const placed = [];
+  for (const b of list) {
+    b.dispLat = b.lat;
+    b.dispLng = b.lng;
+    if (b.lat == null) continue;
+    let n = 0;
+    for (const p of placed) {
+      if (Math.abs(p.lat - b.lat) < 0.00012 && Math.abs(p.lng - b.lng) < 0.00016) n++;
+    }
+    if (n) {
+      const r = 0.00012 * n, a = n * 2.4;
+      b.dispLat = b.lat + r * Math.sin(a);
+      b.dispLng = b.lng + (r * Math.cos(a)) / 0.73;   // longitude degrees are shorter here
+    }
+    placed.push(b);
+  }
+}
+
+// Hide business names that would overlap a name already on screen (zoomed in only)
+function updateLabelCollisions() {
+  if (map.getZoom() < CONFIG.labelZoom) return;
+  const items = [];
+  for (const m of cluster.getLayers()) {
+    const node = m.getElement && m.getElement();
+    const label = node && node.querySelector(".pin-label");
+    if (!label) continue;
+    label.classList.remove("hidden");
+    items.push({ label, m });
+  }
+  const taken = [];
+  for (const { label, m } of items) {
+    const p = map.latLngToContainerPoint(m.getLatLng());
+    const w = label.offsetWidth, h = label.offsetHeight;
+    const r = { x1: p.x + 40, y1: p.y - h / 2, x2: p.x + 40 + w, y2: p.y + h / 2 };
+    if (taken.some(t => r.x1 < t.x2 && r.x2 > t.x1 && r.y1 < t.y2 && r.y2 > t.y1)) {
+      label.classList.add("hidden");
+    } else {
+      taken.push(r);
+    }
+  }
+}
+
 function applyFilters(fit) {
   cluster.clearLayers();
   const shown = businesses.filter(passes);
   const markers = [];
   let unplaced = 0;
   for (const b of shown) {
-    if (b.lat == null) { unplaced++; continue; }
-    const m = L.marker([b.lat, b.lng], { icon: pinIcon(b), title: b.name, keyboard: true });
+    if (b.dispLat == null) { unplaced++; continue; }
+    const m = L.marker([b.dispLat, b.dispLng], { icon: pinIcon(b), title: b.name, keyboard: true });
     m.on("click", () => openSheet(b));
     markers.push(m);
   }
@@ -332,6 +381,7 @@ function applyFilters(fit) {
   if (fit && markers.length) map.fitBounds(L.featureGroup(markers).getBounds().pad(0.15));
   updateStatus(shown.length, unplaced);
   updateChipCounts();
+  setTimeout(updateLabelCollisions, 400);   // give clusters time to finish animating
 }
 
 function updateStatus(shownCount, unplaced) {
@@ -382,7 +432,7 @@ function buildFilters() {
     on: filterState.elf,
     onClick: () => { filterState.elf = !filterState.elf; buildFilters(); applyFilters(true); },
   }));
-  tc.appendChild(chip(`🎁 Events`, {
+  tc.appendChild(chip(`🎉 Events`, {
     on: filterState.events,
     onClick: () => { filterState.events = !filterState.events; buildFilters(); applyFilters(true); },
   }));
@@ -394,7 +444,7 @@ function buildFilters() {
   const sel = document.createElement("select");
   sel.className = "chip" + (filterState.category !== "All" ? " on" : "");
   sel.setAttribute("aria-label", "Filter by category");
-  const cats = [...new Set(businesses.map(b => b.category))].sort((a, b) => a.localeCompare(b));
+  const cats = CONFIG.categories;
   sel.innerHTML = `<option value="All">All categories</option>` +
     cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
   sel.value = filterState.category;
@@ -407,7 +457,7 @@ function updateChipCounts() {
   const favs = getFavs();
   const counts = {
     "🧝 Elf Hunt": businesses.filter(b => b.elf).length,
-    "🎁 Events": businesses.filter(b => b.hasEvent).length,
+    "🎉 Events": businesses.filter(b => b.hasEvent).length,
     "❤️ Favorites": favs.size,
   };
   for (const btn of $("#toggleChips").querySelectorAll("button.chip")) {
@@ -495,6 +545,7 @@ async function init() {
     return;
   }
   const sourceNote = source === "live" ? "live" : "saved copy";
+  spreadPins(list);
   businesses = list;
   buildFilters();
   applyFilters(firstLoad);
