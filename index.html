@@ -507,7 +507,7 @@ function trollIcon(t) {
   const color = LINE_COLOR[t.lineName] || "#999";
   return L.divIcon({
     className: "", iconSize: [32, 32], iconAnchor: [16, 16],
-    html: `<div class="tr" style="border-color:${color}">🚏<span class="pin-label" style="color:${color}">${esc(t.name)}</span></div>`,
+    html: `<div class="tr" style="border-color:${color}">🚏<span class="pin-label" style="color:${color}">#${esc(t.num)} ${esc(t.name)}</span></div>`,
   });
 }
 
