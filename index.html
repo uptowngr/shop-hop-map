@@ -11,7 +11,7 @@
   :root{
     --evergreen:#108342; --santa:#e73221; --hearts:#f098c0; --blue:#2059fe;
     --grinchy:#98cb55; --sunshine:#fed000; --ink:#1d2a22; --muted:#55645a;
-    --paid:#1f8f3a; --line-green:#00B050; --line-red:#e73221;
+    --paid:#f098c0; --line-green:#00B050; --line-red:#e73221;
   }
   *{box-sizing:border-box}
   html{height:100%;overflow:hidden}
@@ -71,8 +71,8 @@
   .pk{width:30px;height:30px;border-radius:8px;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);
     color:#fff;font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif}
   .pk.free{background:var(--blue)}
-  .pk.paid{background:var(--paid)}
-  .tr{width:32px;height:32px;border-radius:50%;background:#fff;border:4px solid #999;display:flex;align-items:center;justify-content:center;
+  .pk.paid{background:var(--paid);color:var(--ink)}
+  .tr{position:relative;width:32px;height:32px;border-radius:50%;background:#fff;border:4px solid #999;display:flex;align-items:center;justify-content:center;
     font-size:15px;box-shadow:0 2px 6px rgba(0,0,0,.3)}
 
   /* Sheets (business card, place card, lists, filters) */
@@ -507,7 +507,7 @@ function trollIcon(t) {
   const color = LINE_COLOR[t.lineName] || "#999";
   return L.divIcon({
     className: "", iconSize: [32, 32], iconAnchor: [16, 16],
-    html: `<div class="tr" style="border-color:${color}">🚋</div>`,
+    html: `<div class="tr" style="border-color:${color}">🚏<span class="pin-label" style="color:${color}">${esc(t.name)}</span></div>`,
   });
 }
 
@@ -596,14 +596,14 @@ function renderLayers() {
   if (filterState.layers.park) {
     for (const p of placesOf("park")) {
       if (p.lat == null || !keep(p)) continue;
-      L.marker([p.lat, p.lng], { icon: parkIcon(p), title: p.name })
+      L.marker([p.lat, p.lng], { icon: parkIcon(p), title: p.name, zIndexOffset: 1000 })
         .on("click", () => openPlaceCard(p)).addTo(parkLayer);
     }
   }
   if (filterState.layers.troll) {
     for (const t of placesOf("troll")) {
       if (t.lat == null || !keep(t)) continue;
-      L.marker([t.lat, t.lng], { icon: trollIcon(t), title: `Stop ${t.num}: ${t.name}` })
+      L.marker([t.lat, t.lng], { icon: trollIcon(t), title: `Stop ${t.num}: ${t.name}`, zIndexOffset: 1000 })
         .on("click", () => openPlaceCard(t)).addTo(trollLayer);
     }
   }
@@ -835,7 +835,7 @@ function placePills(p) {
            (p.transfer ? `<span class="pill plain">Transfer</span>` : "");
   }
   return p.paid
-    ? `<span class="pill" style="background:var(--paid)">City parking · paid</span>`
+    ? `<span class="pill" style="background:var(--paid);color:var(--ink)">City parking · paid</span>`
     : `<span class="pill" style="background:var(--blue)">Free parking</span>`;
 }
 
