@@ -17,7 +17,7 @@
     font-family:"Franklin Gothic URC","Franklin Gothic Medium","Franklin Gothic","Arial Narrow",Arial,sans-serif;}
   #map{position:fixed;inset:0}
 
-  /* Floating header card */
+  /* Top header card */
   .header{position:fixed;z-index:1000;top:max(12px,env(safe-area-inset-top));left:12px;right:12px;
     background:rgba(255,255,255,.95);border-radius:18px;padding:10px 14px;
     box-shadow:0 4px 18px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -25,11 +25,28 @@
   .brand small{display:block;color:var(--santa);font-size:12px;letter-spacing:.08em}
   .status{font-size:12px;color:var(--muted);text-align:right;line-height:1.3}
 
+  /* Filter bar */
+  .filters{position:fixed;z-index:1000;left:12px;right:12px;top:calc(max(12px,env(safe-area-inset-top)) + 70px);
+    display:flex;flex-direction:column;gap:6px}
+  .chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 4px}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:none;border:0;border-radius:999px;padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer;
+    background:rgba(255,255,255,.96);color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.12);font-family:inherit;white-space:nowrap}
+  .chip.on{background:var(--evergreen);color:#fff}
+  .chip.on[data-district]{background:var(--dcolor);color:var(--dtext)}
+  select.chip{appearance:none;-webkit-appearance:none;padding-right:26px;
+    background:rgba(255,255,255,.96) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%231d2a22'/%3E%3C/svg%3E") no-repeat right 10px center}
+  select.chip.on{background-color:var(--evergreen);color:#fff}
+
   /* Map pins */
   .pin{position:relative;width:34px;height:34px}
   .pin-dot{width:30px;height:30px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)}
   .pin-elf{position:absolute;right:-6px;top:-8px;width:20px;height:20px;border-radius:50%;background:var(--sunshine);
     font-size:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+  .pin-label{position:absolute;left:40px;top:50%;transform:translateY(-50%);white-space:nowrap;
+    background:rgba(255,255,255,.95);border-radius:8px;padding:2px 6px;font-size:12px;font-weight:700;
+    box-shadow:0 1px 4px rgba(0,0,0,.2);display:none;pointer-events:none;color:var(--ink)}
+  #map.show-labels .pin-label{display:block}
   .cluster{width:42px;height:42px;border-radius:50%;background:var(--evergreen);color:#fff;border:3px solid #fff;
     display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
   .cluster.big{background:var(--santa)}
@@ -42,7 +59,7 @@
   .sheet.open{transform:translateY(0)}
   .grab{width:42px;height:5px;border-radius:3px;background:#d4dbd6;margin:0 auto 10px}
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;font-size:14px}
-  .pill{display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;color:#fff;font-weight:700;
+  .pill{display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;
     text-transform:uppercase;letter-spacing:.05em}
   .cat{color:var(--muted);font-size:13px}
   .name{font-size:24px;font-weight:700;margin:8px 0 2px;line-height:1.15}
@@ -67,6 +84,11 @@
   <div class="status" id="status">Loading shops…</div>
 </div>
 
+<div class="filters">
+  <div class="chips" id="districtChips"></div>
+  <div class="chips" id="toggleChips"></div>
+</div>
+
 <div class="sheet" id="sheet" aria-live="polite"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -82,17 +104,23 @@ const CONFIG = {
   attribution: '<a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">&copy; OpenStreetMap contributors</a>',
   center: [42.9575, -85.6410],
   zoom: 14,
+  labelZoom: 16,          // business names appear at this zoom and closer
   refreshMinutes: 5,
 };
 
 const CACHE_KEY = "shophop.businesses.v1";
 const FAV_KEY = "shophop.favs.v1";
-const DISTRICT_COLORS = {
-  "Eastown": "#108342",
-  "East Fulton": "#2059fe",
-  "East Hills": "#c2578f",   // deeper Holiday Hearts for legible white text
-  "Wealthy St": "#e73221",
+
+// District brand colors (pin fill, pill, and chip when selected)
+const DISTRICTS = {
+  "Eastown":     { color: "#FF7124", text: "#ffffff" },
+  "East Fulton": { color: "#0079C1", text: "#ffffff" },
+  "East Hills":  { color: "#F2B134", text: "#1d2a22" },
+  "Wealthy St":  { color: "#00B050", text: "#ffffff" },
 };
+const DISTRICT_ORDER = ["Eastown", "East Fulton", "East Hills", "Wealthy St"];
+const FALLBACK_COLOR = { color: "#108342", text: "#ffffff" };
+const colorFor = d => DISTRICTS[d] || FALLBACK_COLOR;
 
 /* ----------------------------------------------------------
    Helpers
@@ -192,7 +220,7 @@ function toBusinesses(rows) {
       id, name,
       address: get(idx.address),
       district: normDistrict(get(idx.district)),
-      category: get(idx.category),
+      category: get(idx.category) || "Other",
       elf: /^y/i.test(get(idx.elf)),
       hours: get(idx.hours),
       hasEvent: /^yes$/i.test(promoRaw) || (!isFlag && promoRaw !== ""),
@@ -224,11 +252,22 @@ async function loadBusinesses() {
 }
 
 /* ----------------------------------------------------------
+   Favorites
+   ---------------------------------------------------------- */
+function getFavs() {
+  try { return new Set(JSON.parse(localStorage.getItem(FAV_KEY) || "[]")); }
+  catch (e) { return new Set(); }
+}
+function saveFavs(set) {
+  try { localStorage.setItem(FAV_KEY, JSON.stringify([...set])); } catch (e) {}
+}
+
+/* ----------------------------------------------------------
    Map
    ---------------------------------------------------------- */
 const map = L.map("map", { zoomControl: false }).setView(CONFIG.center, CONFIG.zoom);
 L.control.zoom({ position: "bottomright" }).addTo(map);
-L.tileLayer(CONFIG.tiles, { maxZoom: 19, attribution: CONFIG.attribution }).addTo(map);
+L.tileLayer(CONFIG.tiles, { tileSize: 256, maxZoom: 19, attribution: CONFIG.attribution }).addTo(map);
 
 const cluster = L.markerClusterGroup({
   showCoverageOnHover: false,
@@ -244,52 +283,162 @@ const cluster = L.markerClusterGroup({
 });
 map.addLayer(cluster);
 
+function updateLabelMode() {
+  document.getElementById("map").classList.toggle("show-labels", map.getZoom() >= CONFIG.labelZoom);
+}
+map.on("zoomend", updateLabelMode);
+updateLabelMode();
+
 function pinIcon(b) {
-  const color = DISTRICT_COLORS[b.district] || "#108342";
+  const c = colorFor(b.district);
   return L.divIcon({
     className: "", iconSize: [34, 34], iconAnchor: [17, 17],
-    html: `<div class="pin"><div class="pin-dot" style="background:${color}"></div>${b.elf ? '<span class="pin-elf">🧝</span>' : ""}</div>`,
+    html: `<div class="pin">
+             <div class="pin-dot" style="background:${c.color}"></div>
+             ${b.elf ? '<span class="pin-elf">🧝</span>' : ""}
+             <span class="pin-label">${esc(b.name)}</span>
+           </div>`,
   });
 }
 
+/* ----------------------------------------------------------
+   Filters: district and category (single choice), plus
+   Elf Hunt, Events, and Favorites toggles (combine with AND)
+   ---------------------------------------------------------- */
+const filterState = { district: "All", category: "All", elf: false, events: false, favOnly: false };
 let businesses = [];
 
-function render(list) {
-  businesses = list;
+function passes(b) {
+  const favs = getFavs();
+  return (filterState.district === "All" || b.district === filterState.district) &&
+         (filterState.category === "All" || b.category === filterState.category) &&
+         (!filterState.elf || b.elf) &&
+         (!filterState.events || b.hasEvent) &&
+         (!filterState.favOnly || favs.has(b.id));
+}
+
+function applyFilters(fit) {
   cluster.clearLayers();
+  const shown = businesses.filter(passes);
   const markers = [];
-  const unplaced = [];
-  for (const b of list) {
-    if (b.lat == null) { unplaced.push(b.name); continue; }
+  let unplaced = 0;
+  for (const b of shown) {
+    if (b.lat == null) { unplaced++; continue; }
     const m = L.marker([b.lat, b.lng], { icon: pinIcon(b), title: b.name, keyboard: true });
     m.on("click", () => openSheet(b));
     markers.push(m);
   }
   cluster.addLayers(markers);
-  if (markers.length) map.fitBounds(L.featureGroup(markers).getBounds().pad(0.15));
-  if (unplaced.length) console.warn("No map coordinates for:", unplaced);
-  return unplaced.length;
+  if (fit && markers.length) map.fitBounds(L.featureGroup(markers).getBounds().pad(0.15));
+  updateStatus(shown.length, unplaced);
+  updateChipCounts();
+}
+
+function updateStatus(shownCount, unplaced) {
+  const total = businesses.length;
+  const shownText = shownCount === total ? `${total} shops` : `${shownCount} of ${total} shops`;
+  const missingNote = unplaced ? ` · ${unplaced} without map spots` : "";
+  $("#status").textContent = `${shownText}${missingNote}`;
+}
+
+function chip(label, { on = false, onClick, extra = "" } = {}) {
+  const b = document.createElement("button");
+  b.className = "chip" + (on ? " on" : "");
+  b.innerHTML = label;
+  if (extra) b.dataset.district = extra;
+  b.onclick = onClick;
+  return b;
+}
+
+function buildFilters() {
+  // District chips
+  const dc = $("#districtChips");
+  dc.innerHTML = "";
+  dc.appendChild(chip("All districts", {
+    on: filterState.district === "All",
+    onClick: () => { filterState.district = "All"; buildFilters(); applyFilters(true); },
+  }));
+  for (const d of DISTRICT_ORDER) {
+    const c = colorFor(d);
+    const el = chip(d, {
+      on: filterState.district === d,
+      extra: d,
+      onClick: () => {
+        filterState.district = (filterState.district === d) ? "All" : d;
+        buildFilters();
+        applyFilters(false);
+        if (filterState.district !== "All") focusDistrict(d);
+      },
+    });
+    el.style.setProperty("--dcolor", c.color);
+    el.style.setProperty("--dtext", c.text);
+    dc.appendChild(el);
+  }
+
+  // Toggles and category
+  const tc = $("#toggleChips");
+  tc.innerHTML = "";
+  tc.appendChild(chip(`🧝 Elf Hunt`, {
+    on: filterState.elf,
+    onClick: () => { filterState.elf = !filterState.elf; buildFilters(); applyFilters(true); },
+  }));
+  tc.appendChild(chip(`🎁 Events`, {
+    on: filterState.events,
+    onClick: () => { filterState.events = !filterState.events; buildFilters(); applyFilters(true); },
+  }));
+  tc.appendChild(chip(`❤️ Favorites`, {
+    on: filterState.favOnly,
+    onClick: () => { filterState.favOnly = !filterState.favOnly; buildFilters(); applyFilters(true); },
+  }));
+
+  const sel = document.createElement("select");
+  sel.className = "chip" + (filterState.category !== "All" ? " on" : "");
+  sel.setAttribute("aria-label", "Filter by category");
+  const cats = [...new Set(businesses.map(b => b.category))].sort((a, b) => a.localeCompare(b));
+  sel.innerHTML = `<option value="All">All categories</option>` +
+    cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+  sel.value = filterState.category;
+  sel.onchange = () => { filterState.category = sel.value; buildFilters(); applyFilters(true); };
+  tc.appendChild(sel);
+}
+
+// Show counts on the toggle chips (kept in sync with the data and favorites)
+function updateChipCounts() {
+  const favs = getFavs();
+  const counts = {
+    "🧝 Elf Hunt": businesses.filter(b => b.elf).length,
+    "🎁 Events": businesses.filter(b => b.hasEvent).length,
+    "❤️ Favorites": favs.size,
+  };
+  for (const btn of $("#toggleChips").querySelectorAll("button.chip")) {
+    const base = btn.textContent.replace(/\s*\(\d+\)$/, "");
+    if (counts[base] !== undefined) btn.textContent = `${base} (${counts[base]})`;
+  }
+}
+
+// Fly to a district's businesses
+function focusDistrict(d) {
+  const pts = businesses.filter(b => b.district === d && b.lat != null).map(b => [b.lat, b.lng]);
+  if (pts.length) map.flyToBounds(pts, { padding: [140, 40], maxZoom: 16 });
+}
+
+function render(list) {
+  businesses = list;
+  buildFilters();
+  applyFilters(false);
 }
 
 /* ----------------------------------------------------------
    Bottom sheet
    ---------------------------------------------------------- */
-function getFavs() {
-  try { return new Set(JSON.parse(localStorage.getItem(FAV_KEY) || "[]")); }
-  catch (e) { return new Set(); }
-}
-function saveFavs(set) {
-  try { localStorage.setItem(FAV_KEY, JSON.stringify([...set])); } catch (e) {}
-}
-
 function openSheet(b) {
   const isFav = getFavs().has(b.id);
-  const color = DISTRICT_COLORS[b.district] || "#108342";
+  const c = colorFor(b.district);
   const sheet = $("#sheet");
   sheet.innerHTML = `
     <div class="grab"></div>
     <div class="row">
-      <span class="pill" style="background:${color}">${esc(b.district)}</span>
+      <span class="pill" style="background:${c.color};color:${c.text}">${esc(b.district)}</span>
       ${b.category ? `<span class="cat">${esc(b.category)}</span>` : ""}
     </div>
     <div class="name">${esc(b.name)}</div>
@@ -320,6 +469,9 @@ function toggleFav(b) {
   const btn = $("#fav");
   btn.textContent = favs.has(b.id) ? "❤️" : "🤍";
   btn.classList.remove("bounce"); void btn.offsetWidth; btn.classList.add("bounce");
+  // If the Favorites filter is on, the list changes right away
+  if (filterState.favOnly) { applyFilters(false); buildFilters(); }
+  else updateChipCounts();
 }
 
 // Swipe down on the sheet to close it (only when scrolled to the top)
@@ -335,16 +487,19 @@ map.on("click", closeSheet);
 /* ----------------------------------------------------------
    Startup + periodic refresh from the sheet
    ---------------------------------------------------------- */
+let firstLoad = true;
 async function init() {
   const { list, source } = await loadBusinesses();
   if (source === "none") {
     $("#status").textContent = "Couldn't load shops. Check your connection and refresh.";
     return;
   }
-  const missing = render(list);
-  const where = source === "live" ? "live from our sheet" : "saved copy (offline)";
-  const missingNote = missing ? ` · ${missing} without map spots` : "";
-  $("#status").textContent = `${list.length} shops · ${where}${missingNote}`;
+  const sourceNote = source === "live" ? "live" : "saved copy";
+  businesses = list;
+  buildFilters();
+  applyFilters(firstLoad);
+  $("#status").textContent += ` · ${sourceNote}`;
+  firstLoad = false;
 }
 
 init();
