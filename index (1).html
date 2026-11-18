@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Uptown Shop Hop Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<style>
+  :root{
+    --evergreen:#108342; --santa:#e73221; --hearts:#f098c0; --blue:#2059fe;
+    --grinchy:#98cb55; --sunshine:#fed000; --ink:#1d2a22; --muted:#55645a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;color:var(--ink);
+    font-family:"Franklin Gothic URC","Franklin Gothic Medium","Franklin Gothic","Arial Narrow",Arial,sans-serif;}
+  #map{position:fixed;inset:0}
+
+  /* Floating header card */
+  .header{position:fixed;z-index:1000;top:max(12px,env(safe-area-inset-top));left:12px;right:12px;
+    background:rgba(255,255,255,.95);border-radius:18px;padding:10px 14px;
+    box-shadow:0 4px 18px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .brand{font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--evergreen);font-size:17px;line-height:1.1}
+  .brand small{display:block;color:var(--santa);font-size:12px;letter-spacing:.08em}
+  .status{font-size:12px;color:var(--muted);text-align:right;line-height:1.3}
+
+  /* Map pins */
+  .pin{position:relative;width:34px;height:34px}
+  .pin-dot{width:30px;height:30px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+  .pin-elf{position:absolute;right:-6px;top:-8px;width:20px;height:20px;border-radius:50%;background:var(--sunshine);
+    font-size:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+  .cluster{width:42px;height:42px;border-radius:50%;background:var(--evergreen);color:#fff;border:3px solid #fff;
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+  .cluster.big{background:var(--santa)}
+
+  /* Bottom sheet */
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:1100;background:#fff;border-radius:22px 22px 0 0;
+    box-shadow:0 -10px 30px rgba(0,0,0,.2);transform:translateY(110%);
+    transition:transform .38s cubic-bezier(.32,.72,0,1);max-height:46vh;overflow:auto;
+    padding:10px 18px calc(18px + env(safe-area-inset-bottom))}
+  .sheet.open{transform:translateY(0)}
+  .grab{width:42px;height:5px;border-radius:3px;background:#d4dbd6;margin:0 auto 10px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;font-size:14px}
+  .pill{display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;color:#fff;font-weight:700;
+    text-transform:uppercase;letter-spacing:.05em}
+  .cat{color:var(--muted);font-size:13px}
+  .name{font-size:24px;font-weight:700;margin:8px 0 2px;line-height:1.15}
+  .elfbadge{background:var(--sunshine);border-radius:999px;padding:3px 10px;font-weight:700;font-size:13px}
+  .promo{background:#f4f8f2;border-radius:14px;padding:10px 12px;font-size:14px;line-height:1.4;margin-top:10px;white-space:pre-line}
+  .actions{display:flex;gap:8px;margin-top:14px;align-items:stretch}
+  .btn{flex:1;border:0;border-radius:14px;padding:12px;font-weight:700;font-size:15px;text-align:center;
+    text-decoration:none;cursor:pointer;color:var(--ink);background:#eef3ef;font-family:inherit}
+  .btn.primary{background:var(--evergreen);color:#fff}
+  .heart{width:50px;height:50px;border-radius:50%;border:0;background:#fff0f6;font-size:24px;cursor:pointer;flex:none}
+  .bounce{animation:bounce .45s}
+  @keyframes bounce{0%{transform:scale(1)}35%{transform:scale(1.35)}65%{transform:scale(.9)}100%{transform:scale(1)}}
+  @media (prefers-reduced-motion: reduce){.sheet{transition:none}.bounce{animation:none}}
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div class="header">
+  <div class="brand">Uptown<br>Shop Hop<small>Thu, Dec 3 · 3–9 PM</small></div>
+  <div class="status" id="status">Loading shops…</div>
+</div>
+
+<div class="sheet" id="sheet" aria-live="polite"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+/* ==========================================================
+   CONFIG — the only place to change links and settings
+   ========================================================== */
+const CONFIG = {
+  // "Participating Businesses" tab, published as CSV
+  businessesCsv: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRt0Fie1CF7DBCj77kSxKlNxjfzG0xoLZ-FyWmix1f84PHqTDbIjcq-fFeCqkxtMz_SrlYrOBNW1nkm/pub?gid=2137669598&single=true&output=csv",
+  tiles: "https://api.maptiler.com/maps/streets-v4/256/{z}/{x}/{y}.png?key=FvkmfrRMhQ3DpBY6YwvK",
+  attribution: '<a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">&copy; OpenStreetMap contributors</a>',
+  center: [42.9575, -85.6410],
+  zoom: 14,
+  refreshMinutes: 5,
+};
+
+const CACHE_KEY = "shophop.businesses.v1";
+const FAV_KEY = "shophop.favs.v1";
+const DISTRICT_COLORS = {
+  "Eastown": "#108342",
+  "East Fulton": "#2059fe",
+  "East Hills": "#c2578f",   // deeper Holiday Hearts for legible white text
+  "Wealthy St": "#e73221",
+};
+
+/* ----------------------------------------------------------
+   Helpers
+   ---------------------------------------------------------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+// Proper CSV parser: handles quoted commas, doubled quotes, and line breaks inside quotes
+function parseCSV(text) {
+  const rows = [];
+  let row = [], field = "", quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else quoted = false;
+      } else field += c;
+    } else if (c === '"') {
+      quoted = true;
+    } else if (c === ",") {
+      row.push(field); field = "";
+    } else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(field); rows.push(row); row = []; field = "";
+    } else field += c;
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim() !== ""));
+}
+
+// Accepts "42.9555, -85.6416" (either order) or DMS like 42°57'19.8"N 85°38'29.9"W
+function parseCoords(s) {
+  if (!s) return null;
+  let m = s.match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
+  if (m) {
+    const a = +m[1], b = +m[2];
+    if (a > 40 && a < 45 && b < -80 && b > -90) return [a, b];   // lat, lng
+    if (b > 40 && b < 45 && a < -80 && a > -90) return [b, a];   // lng, lat
+    return null;
+  }
+  m = s.match(/(\d+)°\s*(\d+)'\s*([\d.]+)"?\s*([NS])\s*,?\s*(\d+)°\s*(\d+)'\s*([\d.]+)"?\s*([EW])/i);
+  if (m) {
+    const lat = (+m[1] + m[2] / 60 + m[3] / 3600) * (m[4].toUpperCase() === "S" ? -1 : 1);
+    const lng = (+m[5] + m[6] / 60 + m[7] / 3600) * (m[8].toUpperCase() === "W" ? -1 : 1);
+    return [lat, lng];
+  }
+  return null;
+}
+
+function normDistrict(s) {
+  if (/wealthy/i.test(s)) return "Wealthy St";
+  if (/east\s*fulton/i.test(s)) return "East Fulton";
+  if (/east\s*hills/i.test(s)) return "East Hills";
+  if (/eastown/i.test(s)) return "Eastown";
+  return s || "Uptown";
+}
+
+/* ----------------------------------------------------------
+   Data layer: published sheet -> businesses
+   Column names are matched by header (case, spaces, "?" ignored),
+   so reordering columns in the sheet won't break the app.
+   ---------------------------------------------------------- */
+function toBusinesses(rows) {
+  const head = rows[0].map(h => h.trim().toLowerCase().replace(/\?/g, "").trim());
+  const find = (...names) => {
+    for (const n of names) { const i = head.indexOf(n); if (i >= 0) return i; }
+    return -1;
+  };
+  const idx = {
+    name: find("business name", "name"),
+    address: find("address"),
+    district: find("district"),
+    category: find("category"),
+    elf: find("elf hunt"),
+    hours: find("hours"),
+    promo: find("event or promotion", "event / promotion", "event"),
+    sponsor: find("sponsor"),
+    coords: head.findIndex(h => h.includes("coord") || h.includes("lat")),
+  };
+  if (idx.name < 0) throw new Error('No "Business Name" column found in sheet');
+
+  const seen = new Map();
+  const list = [];
+  for (const r of rows.slice(1)) {
+    const get = i => (i >= 0 && r[i] != null ? r[i].trim() : "");
+    const name = get(idx.name);
+    if (!name) continue;
+    const ll = parseCoords(get(idx.coords));
+    let id = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const n = (seen.get(id) || 0) + 1; seen.set(id, n);
+    if (n > 1) id += "-" + n;
+    // The promo column is sometimes a Yes/No flag and sometimes a written description
+    const promoRaw = get(idx.promo);
+    const isFlag = /^(yes|no)$/i.test(promoRaw);
+    list.push({
+      id, name,
+      address: get(idx.address),
+      district: normDistrict(get(idx.district)),
+      category: get(idx.category),
+      elf: /^y/i.test(get(idx.elf)),
+      hours: get(idx.hours),
+      hasEvent: /^yes$/i.test(promoRaw) || (!isFlag && promoRaw !== ""),
+      promo: isFlag ? "" : promoRaw,
+      sponsor: /^y/i.test(get(idx.sponsor)),
+      lat: ll ? ll[0] : null,
+      lng: ll ? ll[1] : null,
+    });
+  }
+  return list;
+}
+
+async function loadBusinesses() {
+  try {
+    const res = await fetch(CONFIG.businessesCsv, { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const list = toBusinesses(parseCSV(await res.text()));
+    if (!list.length) throw new Error("Sheet returned no businesses");
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(list)); } catch (e) {}
+    return { list, source: "live" };
+  } catch (err) {
+    console.warn("Live sheet failed:", err);
+    try {
+      const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
+      if (cached && cached.length) return { list: cached, source: "cached" };
+    } catch (e) {}
+    return { list: [], source: "none", error: String(err) };
+  }
+}
+
+/* ----------------------------------------------------------
+   Map
+   ---------------------------------------------------------- */
+const map = L.map("map", { zoomControl: false }).setView(CONFIG.center, CONFIG.zoom);
+L.control.zoom({ position: "bottomright" }).addTo(map);
+L.tileLayer(CONFIG.tiles, { maxZoom: 19, attribution: CONFIG.attribution }).addTo(map);
+
+const cluster = L.markerClusterGroup({
+  showCoverageOnHover: false,
+  spiderfyOnMaxZoom: true,
+  maxClusterRadius: 50,
+  iconCreateFunction: c => {
+    const n = c.getChildCount();
+    return L.divIcon({
+      html: `<div class="cluster ${n > 25 ? "big" : ""}">${n}</div>`,
+      className: "", iconSize: [42, 42],
+    });
+  },
+});
+map.addLayer(cluster);
+
+function pinIcon(b) {
+  const color = DISTRICT_COLORS[b.district] || "#108342";
+  return L.divIcon({
+    className: "", iconSize: [34, 34], iconAnchor: [17, 17],
+    html: `<div class="pin"><div class="pin-dot" style="background:${color}"></div>${b.elf ? '<span class="pin-elf">🧝</span>' : ""}</div>`,
+  });
+}
+
+let businesses = [];
+
+function render(list) {
+  businesses = list;
+  cluster.clearLayers();
+  const markers = [];
+  const unplaced = [];
+  for (const b of list) {
+    if (b.lat == null) { unplaced.push(b.name); continue; }
+    const m = L.marker([b.lat, b.lng], { icon: pinIcon(b), title: b.name, keyboard: true });
+    m.on("click", () => openSheet(b));
+    markers.push(m);
+  }
+  cluster.addLayers(markers);
+  if (markers.length) map.fitBounds(L.featureGroup(markers).getBounds().pad(0.15));
+  if (unplaced.length) console.warn("No map coordinates for:", unplaced);
+  return unplaced.length;
+}
+
+/* ----------------------------------------------------------
+   Bottom sheet
+   ---------------------------------------------------------- */
+function getFavs() {
+  try { return new Set(JSON.parse(localStorage.getItem(FAV_KEY) || "[]")); }
+  catch (e) { return new Set(); }
+}
+function saveFavs(set) {
+  try { localStorage.setItem(FAV_KEY, JSON.stringify([...set])); } catch (e) {}
+}
+
+function openSheet(b) {
+  const isFav = getFavs().has(b.id);
+  const color = DISTRICT_COLORS[b.district] || "#108342";
+  const sheet = $("#sheet");
+  sheet.innerHTML = `
+    <div class="grab"></div>
+    <div class="row">
+      <span class="pill" style="background:${color}">${esc(b.district)}</span>
+      ${b.category ? `<span class="cat">${esc(b.category)}</span>` : ""}
+    </div>
+    <div class="name">${esc(b.name)}</div>
+    ${b.elf ? '<div class="row"><span class="elfbadge">🧝 Elf Hunt location</span></div>' : ""}
+    <div class="row">🕒 ${esc(b.hours || "Hours coming soon")}</div>
+    ${b.address ? `<div class="row">📍 ${esc(b.address)}</div>` : ""}
+    ${b.promo ? `<div class="promo">${esc(b.promo)}</div>`
+      : b.hasEvent ? `<div class="promo">✨ Shop Hop special happening here. Details coming soon.</div>` : ""}
+    <div class="actions">
+      <button class="heart" id="fav" aria-label="Save to favorites">${isFav ? "❤️" : "🤍"}</button>
+      ${b.lat != null ? `<a class="btn primary" target="_blank" rel="noopener"
+          href="https://www.google.com/maps/dir/?api=1&destination=${b.lat},${b.lng}">Directions</a>` : ""}
+      <button class="btn" id="close">Back to map</button>
+    </div>`;
+  $("#fav").onclick = () => toggleFav(b);
+  $("#close").onclick = closeSheet;
+  sheet.scrollTop = 0;
+  sheet.classList.add("open");
+  if (b.lat != null) map.panTo([b.lat, b.lng]);
+}
+
+function closeSheet() { $("#sheet").classList.remove("open"); }
+
+function toggleFav(b) {
+  const favs = getFavs();
+  if (favs.has(b.id)) favs.delete(b.id); else favs.add(b.id);
+  saveFavs(favs);
+  const btn = $("#fav");
+  btn.textContent = favs.has(b.id) ? "❤️" : "🤍";
+  btn.classList.remove("bounce"); void btn.offsetWidth; btn.classList.add("bounce");
+}
+
+// Swipe down on the sheet to close it (only when scrolled to the top)
+let touchStartY = null;
+$("#sheet").addEventListener("touchstart", e => { touchStartY = e.touches[0].clientY; }, { passive: true });
+$("#sheet").addEventListener("touchend", e => {
+  if (touchStartY != null && $("#sheet").scrollTop === 0 &&
+      e.changedTouches[0].clientY - touchStartY > 60) closeSheet();
+  touchStartY = null;
+});
+map.on("click", closeSheet);
+
+/* ----------------------------------------------------------
+   Startup + periodic refresh from the sheet
+   ---------------------------------------------------------- */
+async function init() {
+  const { list, source } = await loadBusinesses();
+  if (source === "none") {
+    $("#status").textContent = "Couldn't load shops. Check your connection and refresh.";
+    return;
+  }
+  const missing = render(list);
+  const where = source === "live" ? "live from our sheet" : "saved copy (offline)";
+  const missingNote = missing ? ` · ${missing} without map spots` : "";
+  $("#status").textContent = `${list.length} shops · ${where}${missingNote}`;
+}
+
+init();
+setInterval(init, CONFIG.refreshMinutes * 60 * 1000);
+</script>
+</body>
+</html>
