@@ -27,25 +27,31 @@
   .brand small{display:block;color:var(--santa);font-size:12px;letter-spacing:.08em}
   .status{font-size:12px;color:var(--muted);text-align:right;line-height:1.3}
 
-  /* Filter bar */
-  .filters{position:fixed;z-index:1000;left:12px;right:12px;top:calc(max(12px,env(safe-area-inset-top)) + 82px);
-    display:flex;flex-direction:column;gap:6px}
+  /* Filter button under the header */
+  .filters{position:fixed;z-index:1000;left:12px;top:calc(max(12px,env(safe-area-inset-top)) + 82px)}
+  .fbtn{height:36px;display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;padding:0 16px;font-family:inherit;font-size:14px;font-weight:700;
+    background:rgba(255,255,255,.96);color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.12);cursor:pointer}
+  .fbtn.on{background:var(--evergreen);color:#fff}
+
+  /* Filter sheet pieces */
+  .flabel{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:16px 0 6px}
   .chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 4px}
   .chips::-webkit-scrollbar{display:none}
+  .chips.wrap{flex-wrap:wrap;overflow:visible;padding:0}
   .chip{flex:none;height:34px;display:inline-flex;align-items:center;border:0;border-radius:999px;padding:0 14px;font-size:13px;font-weight:700;cursor:pointer;
-    background:rgba(255,255,255,.96);color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.12);font-family:inherit;white-space:nowrap}
+    background:#eef3ef;color:var(--ink);font-family:inherit;white-space:nowrap}
   .chip.on{background:var(--evergreen);color:#fff}
   .chip.on[data-district]{background:var(--dcolor);color:var(--dtext)}
-  select.chip{appearance:none;-webkit-appearance:none;padding-right:26px;
-    background:rgba(255,255,255,.96) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%231d2a22'/%3E%3C/svg%3E") no-repeat right 10px center}
-  select.chip.on{background-color:var(--evergreen);color:#fff}
+  .chip:disabled{opacity:.5;cursor:default}
+  .field{width:100%;height:44px;border:1px solid #d4dbd6;border-radius:12px;padding:0 12px;font-family:inherit;font-size:15px;color:var(--ink);background:#fff}
 
-  /* Bottom tab bar */
+  /* Bottom tab bar, two rows */
   .tabbar{position:fixed;z-index:1050;left:12px;right:12px;
-    bottom:max(14px,env(safe-area-inset-bottom));display:flex;gap:4px;
-    background:rgba(255,255,255,.92);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
-    border-radius:999px;padding:6px;box-shadow:0 6px 20px rgba(0,0,0,.18)}
-  .tab{flex:1;min-width:0;border:0;background:transparent;border-radius:999px;padding:10px 6px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    bottom:max(12px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:4px;
+    background:rgba(255,255,255,.94);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+    border-radius:22px;padding:6px;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+  .tabrow{display:flex;gap:4px}
+  .tab{flex:1;min-width:0;border:0;background:transparent;border-radius:999px;padding:9px 6px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .tab.on{background:var(--evergreen);color:#fff}
 
   /* Map pins */
@@ -63,7 +69,7 @@
     display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
   .cluster.big{background:var(--santa)}
 
-  /* Sheets (business card, Elf Hunt, Favorites) */
+  /* Sheets (business card, Elf Hunt, Favorites, Filters, Trolley, Parking) */
   .sheet{position:fixed;left:0;right:0;bottom:0;z-index:1100;width:100%;background:#fff;border-radius:22px 22px 0 0;
     box-shadow:0 -10px 30px rgba(0,0,0,.2);transform:translateY(110%);
     transition:transform .38s cubic-bezier(.32,.72,0,1);max-height:46vh;max-height:46dvh;overflow-y:auto;overflow-x:hidden;
@@ -94,7 +100,7 @@
   @keyframes bounce{0%{transform:scale(1)}35%{transform:scale(1.35)}65%{transform:scale(.9)}100%{transform:scale(1)}}
   @media (prefers-reduced-motion: reduce){.sheet{transition:none}.bounce{animation:none}}
 
-  /* Elf Hunt and Favorites lists */
+  /* Info bars and lists */
   .notice{background:#fff7d6;border-radius:14px;padding:10px 12px;font-size:14px;line-height:1.4;margin-top:10px}
   .notice summary{cursor:pointer;font-weight:700}
   .notice p{margin:8px 0 0}
@@ -125,18 +131,26 @@
 </div>
 
 <div class="filters">
-  <div class="chips" id="districtChips"></div>
-  <div class="chips" id="toggleChips"></div>
+  <button class="fbtn" id="filterBtn">Filters</button>
 </div>
 
 <div class="sheet" id="sheet" aria-live="polite"></div>
+<div class="sheet tall" id="filterSheet"></div>
 <div class="sheet tall" id="elfSheet" aria-live="polite"></div>
 <div class="sheet tall" id="favSheet" aria-live="polite"></div>
+<div class="sheet tall" id="trollSheet" aria-live="polite"></div>
+<div class="sheet tall" id="parkSheet" aria-live="polite"></div>
 
 <nav class="tabbar">
-  <button class="tab on" id="tabMap">🗺 Map</button>
-  <button class="tab" id="tabElf">🧝 Elf Hunt</button>
-  <button class="tab" id="tabFav">❤️ Favorites</button>
+  <div class="tabrow">
+    <button class="tab on" id="tabMap">🗺 Map</button>
+    <button class="tab" id="tabElf">🧝 Elf Hunt</button>
+    <button class="tab" id="tabFav">❤️ Favorites</button>
+  </div>
+  <div class="tabrow">
+    <button class="tab" id="tabTroll">🚋 Trolley</button>
+    <button class="tab" id="tabPark">🅿️ Parking</button>
+  </div>
 </nav>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -162,6 +176,7 @@ const CONFIG = {
     turnIn: ["Sticky Fingers", "Vintage Charm"], // used if the sheet has no "Elf Turn-In" column
     email: "events@uptowngr.com",
   },
+  trolleyInfo: "Trolleys are a fun and festive way to enjoy Uptown, but please do not rely on the trolleys as your main source of transportation, as the demand is incredibly high. Uptown is incredibly walkable, even between districts!",
 };
 
 const CACHE_KEY = "shophop.businesses.v1";
@@ -234,6 +249,14 @@ function normDistrict(s) {
   if (/east\s*hills/i.test(s)) return "East Hills";
   if (/eastown/i.test(s)) return "Eastown";
   return s || "Uptown";
+}
+
+// Opens the address in the phone's default maps app
+function mapsUrl(b) {
+  const dest = b.lat != null ? `${b.lat},${b.lng}` : encodeURIComponent(`${b.address}, Grand Rapids, MI`);
+  if (/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent)) return `https://maps.apple.com/?daddr=${dest}`;
+  if (/Android/.test(navigator.userAgent)) return `geo:0,0?q=${dest}`;
+  return `https://www.google.com/maps/search/?api=1&query=${dest}`;
 }
 
 /* ----------------------------------------------------------
@@ -343,7 +366,6 @@ L.MarkerCluster.prototype._generatePointsCircle = function (count, centerPt) {
 };
 
 const map = L.map("map", { zoomControl: false }).setView(CONFIG.center, CONFIG.zoom);
-L.control.zoom({ position: "bottomright" }).addTo(map);
 L.tileLayer(CONFIG.tiles, { tileSize: 256, maxZoom: 19, attribution: CONFIG.attribution }).addTo(map);
 
 const cluster = L.markerClusterGroup({
@@ -406,8 +428,9 @@ function updateLabelCollisions() {
 }
 
 /* ----------------------------------------------------------
-   Filters: district and category (single choice), plus
-   Elf Hunt, Events, and Favorites toggles (combine with AND)
+   Filters (in a sheet opened by the Filters button).
+   District, category, and Elf Hunt / Events / Favorites narrow the
+   businesses on the map. All combine with AND.
    ---------------------------------------------------------- */
 const filterState = { district: "All", category: "All", elf: false, events: false, favOnly: false };
 let businesses = [];
@@ -419,6 +442,11 @@ function passes(b) {
          (!filterState.elf || b.elf) &&
          (!filterState.events || b.hasEvent) &&
          (!filterState.favOnly || favs.has(b.id));
+}
+
+function activeFilterCount() {
+  return (filterState.district !== "All") + (filterState.category !== "All") +
+         filterState.elf + filterState.events + filterState.favOnly;
 }
 
 function applyFilters(fit) {
@@ -447,78 +475,113 @@ function updateStatus(shownCount, unplaced) {
   $("#status").textContent = `${shownText}${missingNote}`;
 }
 
-function chip(label, { on = false, onClick, extra = "" } = {}) {
+function chip(label, { on = false, onClick, extra = "", disabled = false } = {}) {
   const b = document.createElement("button");
   b.className = "chip" + (on ? " on" : "");
   b.innerHTML = label;
   if (extra) b.dataset.district = extra;
+  b.disabled = disabled;
   b.onclick = onClick;
   return b;
 }
 
+// Builds the filter sheet's contents and the Filters button label
 function buildFilters() {
-  // District chips
-  const dc = $("#districtChips");
-  dc.innerHTML = "";
+  const n = activeFilterCount();
+  const btn = $("#filterBtn");
+  btn.textContent = n ? `Filters · ${n}` : "Filters";
+  btn.classList.toggle("on", n > 0);
+
+  const counts = {
+    elf: businesses.filter(b => b.elf).length,
+    events: businesses.filter(b => b.hasEvent).length,
+    favs: getFavs().size,
+  };
+
+  const sheet = $("#filterSheet");
+  sheet.innerHTML = `
+    <button class="xbtn" data-close="filter" aria-label="Close">✕</button>
+    <div class="grab"></div>
+    <div class="name">Filters</div>
+    <div class="flabel">District</div>
+    <div class="chips wrap" id="fDistrict"></div>
+    <div class="flabel">Category</div>
+    <select class="field" id="fCategory" aria-label="Filter by category"></select>
+    <div class="flabel">Show only</div>
+    <div class="chips wrap" id="fToggles"></div>
+    <div class="flabel">Map layers</div>
+    <div class="chips wrap" id="fLayers"></div>
+    <div class="actions">
+      <button class="btn" id="fClear">Clear all</button>
+      <button class="btn primary" data-close="filter">Show results</button>
+    </div>`;
+
+  const dc = $("#fDistrict");
   dc.appendChild(chip("All districts", {
     on: filterState.district === "All",
-    onClick: () => { filterState.district = "All"; buildFilters(); applyFilters(true); },
+    onClick: () => setFilter(() => { filterState.district = "All"; }, true),
   }));
   for (const d of DISTRICT_ORDER) {
     const c = colorFor(d);
     const el = chip(d, {
       on: filterState.district === d,
       extra: d,
-      onClick: () => {
-        filterState.district = (filterState.district === d) ? "All" : d;
-        buildFilters();
-        applyFilters(false);
-        if (filterState.district !== "All") focusDistrict(d);
-      },
+      onClick: () => setFilter(() => { filterState.district = filterState.district === d ? "All" : d; }, filterState.district !== "All"),
     });
     el.style.setProperty("--dcolor", c.color);
     el.style.setProperty("--dtext", c.text);
     dc.appendChild(el);
   }
 
-  // Toggles and category
-  const tc = $("#toggleChips");
-  tc.innerHTML = "";
-  tc.appendChild(chip(`🧝 Elf Hunt`, {
-    on: filterState.elf,
-    onClick: () => { filterState.elf = !filterState.elf; buildFilters(); applyFilters(true); },
-  }));
-  tc.appendChild(chip(`🎉 Events`, {
-    on: filterState.events,
-    onClick: () => { filterState.events = !filterState.events; buildFilters(); applyFilters(true); },
-  }));
-  tc.appendChild(chip(`❤️ Favorites`, {
-    on: filterState.favOnly,
-    onClick: () => { filterState.favOnly = !filterState.favOnly; buildFilters(); applyFilters(true); },
-  }));
-
-  const sel = document.createElement("select");
-  sel.className = "chip" + (filterState.category !== "All" ? " on" : "");
-  sel.setAttribute("aria-label", "Filter by category");
+  const sel = $("#fCategory");
   sel.innerHTML = `<option value="All">All categories</option>` +
     CONFIG.categories.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
   sel.value = filterState.category;
-  sel.onchange = () => { filterState.category = sel.value; buildFilters(); applyFilters(true); };
-  tc.appendChild(sel);
+  sel.onchange = () => setFilter(() => { filterState.category = sel.value; }, sel.value !== "All");
+
+  const tg = $("#fToggles");
+  tg.appendChild(chip(`🧝 Elf Hunt (${counts.elf})`, {
+    on: filterState.elf,
+    onClick: () => setFilter(() => { filterState.elf = !filterState.elf; }, true),
+  }));
+  tg.appendChild(chip(`🎉 Events (${counts.events})`, {
+    on: filterState.events,
+    onClick: () => setFilter(() => { filterState.events = !filterState.events; }, true),
+  }));
+  tg.appendChild(chip(`❤️ Favorites (${counts.favs})`, {
+    on: filterState.favOnly,
+    onClick: () => setFilter(() => { filterState.favOnly = !filterState.favOnly; }, true),
+  }));
+
+  // Parking and trolley layers: connected once the sheet is set up
+  const ly = $("#fLayers");
+  ly.appendChild(chip("🅿️ Parking · soon", { disabled: true }));
+  ly.appendChild(chip("🚋 Trolley stops · soon", { disabled: true }));
+
+  $("#fClear").onclick = () => {
+    Object.assign(filterState, { district: "All", category: "All", elf: false, events: false, favOnly: false });
+    applyFilters(true);
+    buildFilters();
+  };
 }
 
-// Show counts on the toggle chips (kept in sync with the data and favorites)
+// Runs a filter change, then refreshes the map and the sheet
+function setFilter(change, fit) {
+  change();
+  applyFilters(fit);
+  buildFilters();
+}
+
+// Updates the Favorites tab count and the filter sheet counts
 function updateChipCounts() {
-  const counts = {
-    "🧝 Elf Hunt": businesses.filter(b => b.elf).length,
-    "🎉 Events": businesses.filter(b => b.hasEvent).length,
-    "❤️ Favorites": getFavs().size,
-  };
-  for (const btn of $("#toggleChips").querySelectorAll("button.chip")) {
-    const base = btn.textContent.replace(/\s*\(\d+\)$/, "");
-    if (counts[base] !== undefined) btn.textContent = `${base} (${counts[base]})`;
+  const favCount = getFavs().size;
+  $("#tabFav").textContent = `❤️ Favorites${favCount ? ` (${favCount})` : ""}`;
+  if ($("#filterSheet").classList.contains("open")) buildFilters();
+  else {
+    const n = activeFilterCount();
+    $("#filterBtn").textContent = n ? `Filters · ${n}` : "Filters";
+    $("#filterBtn").classList.toggle("on", n > 0);
   }
-  $("#tabFav").textContent = `❤️ Favorites${counts["❤️ Favorites"] ? ` (${counts["❤️ Favorites"]})` : ""}`;
 }
 
 // Fly to a district's businesses
@@ -528,20 +591,19 @@ function focusDistrict(d) {
 }
 
 /* ----------------------------------------------------------
-   Panels: map, business card, Elf Hunt, Favorites
+   Panels: map, business card, Elf Hunt, Favorites, Filters,
+   Trolley, Parking
    ---------------------------------------------------------- */
 let currentBusiness = null;
+const PANELS = ["sheet", "filterSheet", "elfSheet", "favSheet", "trollSheet", "parkSheet"];
+const TAB_IDS = { map: "tabMap", elf: "tabElf", fav: "tabFav", troll: "tabTroll", park: "tabPark" };
 
 function setTab(which) {
-  $("#tabMap").classList.toggle("on", which === "map");
-  $("#tabElf").classList.toggle("on", which === "elf");
-  $("#tabFav").classList.toggle("on", which === "fav");
+  for (const [k, id] of Object.entries(TAB_IDS)) $("#" + id).classList.toggle("on", k === which);
 }
 
 function closeAllPanels() {
-  $("#sheet").classList.remove("open");
-  $("#elfSheet").classList.remove("open");
-  $("#favSheet").classList.remove("open");
+  for (const id of PANELS) $("#" + id).classList.remove("open");
   currentBusiness = null;
 }
 
@@ -577,14 +639,6 @@ function elfSection(b) {
     if (name) html += `<div class="row found-tag">✓ Saved on this phone</div>`;
   }
   return html;
-}
-
-// Opens the address in the phone's default maps app
-function mapsUrl(b) {
-  const dest = b.lat != null ? `${b.lat},${b.lng}` : encodeURIComponent(`${b.address}, Grand Rapids, MI`);
-  if (/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent)) return `https://maps.apple.com/?daddr=${dest}`;
-  if (/Android/.test(navigator.userAgent)) return `geo:0,0?q=${dest}`;
-  return `https://www.google.com/maps/search/?api=1&query=${dest}`;
 }
 
 function openSheet(b) {
@@ -632,8 +686,8 @@ function toggleFav(b) {
     btn.classList.remove("bounce"); void btn.offsetWidth; btn.classList.add("bounce");
   }
   // If the Favorites filter is on, the map list changes right away
-  if (filterState.favOnly) { applyFilters(false); buildFilters(); }
-  else updateChipCounts();
+  if (filterState.favOnly) applyFilters(false);
+  updateChipCounts();
   if ($("#favSheet").classList.contains("open")) renderFavList();
 }
 
@@ -784,6 +838,39 @@ function renderFavList() {
 }
 
 /* ----------------------------------------------------------
+   Trolley and Parking tabs (placeholders until the sheet is connected)
+   ---------------------------------------------------------- */
+function openTrolley() {
+  closeAllPanels();
+  $("#trollSheet").innerHTML = `
+    <button class="xbtn" data-close="troll" aria-label="Back to map">✕</button>
+    <div class="grab"></div>
+    <div class="name">🚋 Trolley Stops</div>
+    <div class="notice">${esc(CONFIG.trolleyInfo)}</div>
+    <div class="empty">Trolley stops will show up here once they're connected.</div>`;
+  $("#trollSheet").classList.add("open");
+  setTab("troll");
+}
+
+function openParking() {
+  closeAllPanels();
+  $("#parkSheet").innerHTML = `
+    <button class="xbtn" data-close="park" aria-label="Back to map">✕</button>
+    <div class="grab"></div>
+    <div class="name">🅿️ Parking</div>
+    <div class="empty">Parking spots will show up here once they're connected.</div>`;
+  $("#parkSheet").classList.add("open");
+  setTab("park");
+}
+
+function openFilters() {
+  closeAllPanels();
+  buildFilters();
+  $("#filterSheet").classList.add("open");
+  setTab("map");
+}
+
+/* ----------------------------------------------------------
    Taps inside the Elf Hunt and Favorites tabs
    ---------------------------------------------------------- */
 $("#elfSheet").addEventListener("click", e => {
@@ -828,6 +915,12 @@ $("#favSheet").addEventListener("click", e => {
   }
 });
 
+// Every ✕ and "back" button in the panels returns to the map
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-close]");
+  if (t) goMap();
+});
+
 /* ----------------------------------------------------------
    Sheet interactions: swipe down to close, tap map to close the card
    ---------------------------------------------------------- */
@@ -840,13 +933,17 @@ function addSwipeToClose(el, onClose) {
   });
 }
 addSwipeToClose($("#sheet"), closeSheet);
-addSwipeToClose($("#elfSheet"), goMap);
-addSwipeToClose($("#favSheet"), goMap);
+for (const id of ["filterSheet", "elfSheet", "favSheet", "trollSheet", "parkSheet"]) {
+  addSwipeToClose($("#" + id), goMap);
+}
 map.on("click", closeSheet);
 
 $("#tabMap").onclick = goMap;
 $("#tabElf").onclick = openElf;
 $("#tabFav").onclick = openFav;
+$("#tabTroll").onclick = openTrolley;
+$("#tabPark").onclick = openParking;
+$("#filterBtn").onclick = openFilters;
 
 /* ----------------------------------------------------------
    Startup + periodic refresh from the sheet
