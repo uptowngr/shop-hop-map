@@ -11,6 +11,7 @@
   :root{
     --evergreen:#108342; --santa:#e73221; --hearts:#f098c0; --blue:#2059fe;
     --grinchy:#98cb55; --sunshine:#fed000; --ink:#1d2a22; --muted:#55645a;
+    --paid:#1f8f3a; --line-green:#00B050; --line-red:#e73221;
   }
   *{box-sizing:border-box}
   html{height:100%;overflow:hidden}
@@ -42,7 +43,6 @@
     background:#eef3ef;color:var(--ink);font-family:inherit;white-space:nowrap}
   .chip.on{background:var(--evergreen);color:#fff}
   .chip.on[data-district]{background:var(--dcolor);color:var(--dtext)}
-  .chip:disabled{opacity:.5;cursor:default}
   .field{width:100%;height:44px;border:1px solid #d4dbd6;border-radius:12px;padding:0 12px;font-family:inherit;font-size:15px;color:var(--ink);background:#fff}
 
   /* Bottom tab bar, two rows */
@@ -68,8 +68,14 @@
   .cluster{width:42px;height:42px;border-radius:50%;background:var(--evergreen);color:#fff;border:3px solid #fff;
     display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
   .cluster.big{background:var(--santa)}
+  .pk{width:30px;height:30px;border-radius:8px;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);
+    color:#fff;font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif}
+  .pk.free{background:var(--blue)}
+  .pk.paid{background:var(--paid)}
+  .tr{width:32px;height:32px;border-radius:50%;background:#fff;border:4px solid #999;display:flex;align-items:center;justify-content:center;
+    font-size:15px;box-shadow:0 2px 6px rgba(0,0,0,.3)}
 
-  /* Sheets (business card, Elf Hunt, Favorites, Filters, Trolley, Parking) */
+  /* Sheets (business card, place card, lists, filters) */
   .sheet{position:fixed;left:0;right:0;bottom:0;z-index:1100;width:100%;background:#fff;border-radius:22px 22px 0 0;
     box-shadow:0 -10px 30px rgba(0,0,0,.2);transform:translateY(110%);
     transition:transform .38s cubic-bezier(.32,.72,0,1);max-height:46vh;max-height:46dvh;overflow-y:auto;overflow-x:hidden;
@@ -82,7 +88,8 @@
     font-size:16px;font-weight:700;cursor:pointer;color:var(--ink);font-family:inherit;display:flex;align-items:center;justify-content:center}
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;font-size:14px}
   .pill{display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;
-    text-transform:uppercase;letter-spacing:.05em}
+    text-transform:uppercase;letter-spacing:.05em;color:#fff}
+  .pill.plain{background:#eef3ef;color:var(--ink)}
   .cat{color:var(--muted);font-size:13px}
   .namerow{display:flex;align-items:center;gap:10px;margin:8px 0 2px}
   .name{font-size:24px;font-weight:700;margin:0;line-height:1.15;flex:1;min-width:0;overflow-wrap:anywhere}
@@ -114,11 +121,15 @@
   .elfrow{border-top:1px solid #eef2ee;padding:12px 0}
   .elfrow .top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:8px}
   .elfrow .top > div:first-child{min-width:0;flex:1}
+  .elfrow .side{display:flex;flex-direction:column;gap:6px;flex:none}
   .elfname{font-weight:700;font-size:16px;line-height:1.2;overflow-wrap:anywhere}
   .entry{display:flex;gap:6px;margin-top:8px}
   .entry input{flex:1;min-width:0;width:100%;border:1px solid #d4dbd6;border-radius:12px;padding:10px;font-family:inherit;font-size:15px;color:var(--ink)}
   .found-tag{color:var(--evergreen);font-weight:700;font-size:13px}
   .empty{color:var(--muted);font-size:14px;padding:16px 0;text-align:center}
+  .detail{font-size:12px;color:var(--muted);margin-top:4px;overflow-wrap:anywhere}
+  .detail a{color:var(--evergreen);font-weight:700}
+  .grouphead{margin-top:14px}
 </style>
 </head>
 <body>
@@ -162,6 +173,9 @@
 const CONFIG = {
   // "Participating Businesses" tab, published as CSV
   businessesCsv: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRt0Fie1CF7DBCj77kSxKlNxjfzG0xoLZ-FyWmix1f84PHqTDbIjcq-fFeCqkxtMz_SrlYrOBNW1nkm/pub?gid=2137669598&single=true&output=csv",
+  // "Trolley Stops" and "Parking" tabs, each published as CSV
+  trolleyCsv: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRt0Fie1CF7DBCj77kSxKlNxjfzG0xoLZ-FyWmix1f84PHqTDbIjcq-fFeCqkxtMz_SrlYrOBNW1nkm/pub?gid=0&single=true&output=csv",
+  parkingCsv: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRt0Fie1CF7DBCj77kSxKlNxjfzG0xoLZ-FyWmix1f84PHqTDbIjcq-fFeCqkxtMz_SrlYrOBNW1nkm/pub?gid=1228700567&single=true&output=csv",
   tiles: "https://api.maptiler.com/maps/streets-v4/256/{z}/{x}/{y}.png?key=FvkmfrRMhQ3DpBY6YwvK",
   attribution: '<a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">&copy; OpenStreetMap contributors</a>',
   center: [42.9575, -85.6410],
@@ -180,8 +194,10 @@ const CONFIG = {
 };
 
 const CACHE_KEY = "shophop.businesses.v1";
+const PLACES_CACHE_KEY = "shophop.places.v1";
 const FAV_KEY = "shophop.favs.v1";
 const ELF_KEY = "shophop.elves.v1";
+const LINE_COLOR = { Green: "#00B050", Red: "#e73221" };
 
 // District brand colors (pin fill, pill, and chip when selected)
 const DISTRICTS = {
@@ -252,20 +268,26 @@ function normDistrict(s) {
 }
 
 // Opens the address in the phone's default maps app
-function mapsUrl(b) {
-  const dest = b.lat != null ? `${b.lat},${b.lng}` : encodeURIComponent(`${b.address}, Grand Rapids, MI`);
+function mapsUrl(item) {
+  const dest = item.lat != null ? `${item.lat},${item.lng}` : encodeURIComponent(`${item.address}, Grand Rapids, MI`);
   if (/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent)) return `https://maps.apple.com/?daddr=${dest}`;
   if (/Android/.test(navigator.userAgent)) return `geo:0,0?q=${dest}`;
   return `https://www.google.com/maps/search/?api=1&query=${dest}`;
 }
 
+const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
 /* ----------------------------------------------------------
-   Data layer: published sheet -> businesses
+   Data layer: published sheets -> items
    Column names are matched by header (case, spaces, "?" ignored),
-   so reordering columns in the sheet won't break the app.
+   so reordering columns in a sheet won't break the app.
    ---------------------------------------------------------- */
+function normHeaders(rows) {
+  return rows[0].map(h => h.trim().toLowerCase().replace(/\?/g, "").trim());
+}
+
 function toBusinesses(rows) {
-  const head = rows[0].map(h => h.trim().toLowerCase().replace(/\?/g, "").trim());
+  const head = normHeaders(rows);
   const find = (...names) => {
     for (const n of names) { const i = head.indexOf(n); if (i >= 0) return i; }
     return -1;
@@ -291,13 +313,14 @@ function toBusinesses(rows) {
     const name = get(idx.name);
     if (!name) continue;
     const ll = parseCoords(get(idx.coords));
-    let id = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    let id = slug(name);
     const n = (seen.get(id) || 0) + 1; seen.set(id, n);
     if (n > 1) id += "-" + n;
     // The promo column is sometimes a Yes/No flag and sometimes a written description
     const promoRaw = get(idx.promo);
     const isFlag = /^(yes|no)$/i.test(promoRaw);
     list.push({
+      kind: "biz",
       id, name,
       address: get(idx.address),
       district: normDistrict(get(idx.district)),
@@ -314,6 +337,52 @@ function toBusinesses(rows) {
     });
   }
   return list;
+}
+
+// Trolley stops (rows with a Stop #) and parking lots (rows without one)
+function toPlaces(rows) {
+  const head = normHeaders(rows);
+  const find = pred => head.findIndex(pred);
+  const idx = {
+    stop: find(h => h.startsWith("stop")),
+    line: find(h => h === "line" || h === "parking type" || h === "type"),
+    name: find(h => h.includes("trolley stop name") || h === "name"),
+    address: find(h => h === "address"),
+    coords: find(h => h.includes("coord") || h.includes("lat")),
+    closest: find(h => h.includes("closest")),
+    spots: find(h => h.includes("parking spot")),
+  };
+  const out = [];
+  for (const r of rows.slice(1)) {
+    const get = i => (i >= 0 && r[i] != null ? r[i].trim() : "");
+    const name = get(idx.name);
+    if (!name) continue;
+    const line = get(idx.line);
+    const ll = parseCoords(get(idx.coords));
+    const stop = get(idx.stop);
+    const base = {
+      name, address: get(idx.address), closest: get(idx.closest),
+      lat: ll ? ll[0] : null, lng: ll ? ll[1] : null,
+    };
+    if (/^\d+$/.test(stop)) {
+      const spotsRaw = get(idx.spots);
+      out.push({
+        ...base,
+        kind: "troll", id: "t-" + stop, num: stop,
+        lineName: /red/i.test(line) ? "Red" : /green/i.test(line) ? "Green" : "",
+        transfer: /transfer/i.test(line),
+        freePark: /free parking/i.test(line),
+        spots: /^n\/a$/i.test(spotsRaw) || !spotsRaw ? [] : spotsRaw.split(/\s*[,;]\s*/).filter(Boolean),
+      });
+    } else {
+      out.push({
+        ...base,
+        kind: "park", id: "p-" + slug(name),
+        paid: /paid/i.test(line),
+      });
+    }
+  }
+  return out;
 }
 
 async function loadBusinesses() {
@@ -334,8 +403,28 @@ async function loadBusinesses() {
   }
 }
 
+async function fetchTab(url) {
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  return toPlaces(parseCSV(await res.text()));
+}
+
+// Each tab loads on its own, so one failing tab doesn't hide the other
+async function loadPlaces() {
+  const results = await Promise.allSettled([fetchTab(CONFIG.trolleyCsv), fetchTab(CONFIG.parkingCsv)]);
+  results.forEach((r, i) => { if (r.status === "rejected") console.warn(["Trolley", "Parking"][i] + " tab failed:", r.reason); });
+  if (results.some(r => r.status === "fulfilled")) {
+    const list = results.filter(r => r.status === "fulfilled").flatMap(r => r.value);
+    try { localStorage.setItem(PLACES_CACHE_KEY, JSON.stringify(list)); } catch (e) {}
+    return list;
+  }
+  try { return JSON.parse(localStorage.getItem(PLACES_CACHE_KEY) || "[]"); }
+  catch (e) { return []; }
+}
+
 /* ----------------------------------------------------------
    Favorites and Elf Hunt progress (saved on this device only)
+   Favorites hold business, trolley, and parking ids (prefixed t- and p-)
    ---------------------------------------------------------- */
 function getFavs() {
   try { return new Set(JSON.parse(localStorage.getItem(FAV_KEY) || "[]")); }
@@ -382,6 +471,10 @@ const cluster = L.markerClusterGroup({
 });
 map.addLayer(cluster);
 
+// Parking and trolley pins sit on their own layers so they never get hidden in a business cluster
+const parkLayer = L.layerGroup().addTo(map);
+const trollLayer = L.layerGroup().addTo(map);
+
 function updateLabelMode() {
   document.getElementById("map").classList.toggle("show-labels", map.getZoom() >= CONFIG.labelZoom);
 }
@@ -400,6 +493,21 @@ function pinIcon(b, elves) {
              ${badge}
              <span class="pin-label">${esc(b.name)}</span>
            </div>`,
+  });
+}
+
+function parkIcon(p) {
+  return L.divIcon({
+    className: "", iconSize: [30, 30], iconAnchor: [15, 15],
+    html: `<div class="pk ${p.paid ? "paid" : "free"}">P</div>`,
+  });
+}
+
+function trollIcon(t) {
+  const color = LINE_COLOR[t.lineName] || "#999";
+  return L.divIcon({
+    className: "", iconSize: [32, 32], iconAnchor: [16, 16],
+    html: `<div class="tr" style="border-color:${color}">🚋</div>`,
   });
 }
 
@@ -430,10 +538,20 @@ function updateLabelCollisions() {
 /* ----------------------------------------------------------
    Filters (in a sheet opened by the Filters button).
    District, category, and Elf Hunt / Events / Favorites narrow the
-   businesses on the map. All combine with AND.
+   businesses on the map. Favorites also narrows parking and trolley pins.
+   Parking and trolley layers are on by default.
    ---------------------------------------------------------- */
-const filterState = { district: "All", category: "All", elf: false, events: false, favOnly: false };
+const filterState = {
+  district: "All", category: "All", elf: false, events: false, favOnly: false,
+  layers: { park: true, troll: true },
+};
 let businesses = [];
+let places = [];
+let byId = new Map();
+
+const bizOf = () => businesses;
+const placesOf = kind => places.filter(p => p.kind === kind);
+const favItems = () => { const f = getFavs(); return [...businesses, ...places].filter(i => f.has(i.id)); };
 
 function passes(b) {
   const favs = getFavs();
@@ -462,10 +580,33 @@ function applyFilters(fit) {
     markers.push(m);
   }
   cluster.addLayers(markers);
+  renderLayers();
   if (fit && markers.length) map.fitBounds(L.featureGroup(markers).getBounds().pad(0.15));
   updateStatus(shown.length, unplaced);
   updateChipCounts();
   setTimeout(updateLabelCollisions, 400);   // give clusters time to finish animating
+}
+
+// Parking and trolley pins, respecting the layer toggles and the Favorites filter
+function renderLayers() {
+  parkLayer.clearLayers();
+  trollLayer.clearLayers();
+  const favs = getFavs();
+  const keep = p => !filterState.favOnly || favs.has(p.id);
+  if (filterState.layers.park) {
+    for (const p of placesOf("park")) {
+      if (p.lat == null || !keep(p)) continue;
+      L.marker([p.lat, p.lng], { icon: parkIcon(p), title: p.name })
+        .on("click", () => openPlaceCard(p)).addTo(parkLayer);
+    }
+  }
+  if (filterState.layers.troll) {
+    for (const t of placesOf("troll")) {
+      if (t.lat == null || !keep(t)) continue;
+      L.marker([t.lat, t.lng], { icon: trollIcon(t), title: `Stop ${t.num}: ${t.name}` })
+        .on("click", () => openPlaceCard(t)).addTo(trollLayer);
+    }
+  }
 }
 
 function updateStatus(shownCount, unplaced) {
@@ -475,12 +616,11 @@ function updateStatus(shownCount, unplaced) {
   $("#status").textContent = `${shownText}${missingNote}`;
 }
 
-function chip(label, { on = false, onClick, extra = "", disabled = false } = {}) {
+function chip(label, { on = false, onClick, extra = "" } = {}) {
   const b = document.createElement("button");
   b.className = "chip" + (on ? " on" : "");
   b.innerHTML = label;
   if (extra) b.dataset.district = extra;
-  b.disabled = disabled;
   b.onclick = onClick;
   return b;
 }
@@ -495,7 +635,9 @@ function buildFilters() {
   const counts = {
     elf: businesses.filter(b => b.elf).length,
     events: businesses.filter(b => b.hasEvent).length,
-    favs: getFavs().size,
+    favs: favItems().length,
+    park: placesOf("park").length,
+    troll: placesOf("troll").length,
   };
 
   const sheet = $("#filterSheet");
@@ -553,10 +695,16 @@ function buildFilters() {
     onClick: () => setFilter(() => { filterState.favOnly = !filterState.favOnly; }, true),
   }));
 
-  // Parking and trolley layers: connected once the sheet is set up
+  // Layers are on/off and don't count as filters
   const ly = $("#fLayers");
-  ly.appendChild(chip("🅿️ Parking · soon", { disabled: true }));
-  ly.appendChild(chip("🚋 Trolley stops · soon", { disabled: true }));
+  ly.appendChild(chip(`🅿️ Parking (${counts.park})`, {
+    on: filterState.layers.park,
+    onClick: () => setFilter(() => { filterState.layers.park = !filterState.layers.park; }, false),
+  }));
+  ly.appendChild(chip(`🚋 Trolley stops (${counts.troll})`, {
+    on: filterState.layers.troll,
+    onClick: () => setFilter(() => { filterState.layers.troll = !filterState.layers.troll; }, false),
+  }));
 
   $("#fClear").onclick = () => {
     Object.assign(filterState, { district: "All", category: "All", elf: false, events: false, favOnly: false });
@@ -574,7 +722,7 @@ function setFilter(change, fit) {
 
 // Updates the Favorites tab count and the filter sheet counts
 function updateChipCounts() {
-  const favCount = getFavs().size;
+  const favCount = favItems().length;
   $("#tabFav").textContent = `❤️ Favorites${favCount ? ` (${favCount})` : ""}`;
   if ($("#filterSheet").classList.contains("open")) buildFilters();
   else {
@@ -591,8 +739,8 @@ function focusDistrict(d) {
 }
 
 /* ----------------------------------------------------------
-   Panels: map, business card, Elf Hunt, Favorites, Filters,
-   Trolley, Parking
+   Panels: map, business card, place card, Elf Hunt, Favorites,
+   Filters, Trolley, Parking
    ---------------------------------------------------------- */
 let currentBusiness = null;
 const PANELS = ["sheet", "filterSheet", "elfSheet", "favSheet", "trollSheet", "parkSheet"];
@@ -613,11 +761,12 @@ function goMap() {
   setTab("map");
 }
 
-// Fly to a business and open its card (used by Locate and Show on map)
-function showOnMap(b) {
+// Fly to any item and open its card (used by Show on map, Locate, and Favorites)
+function showOnMap(item) {
   goMap();
-  if (b.lat != null) map.flyTo([b.lat, b.lng], Math.max(map.getZoom(), 17));
-  openSheet(b);
+  if (item.lat != null) map.flyTo([item.lat, item.lng], Math.max(map.getZoom(), 17));
+  if (item.kind === "biz") openSheet(item);
+  else openPlaceCard(item);
 }
 
 /* ----------------------------------------------------------
@@ -676,19 +825,59 @@ function closeSheet() {
   currentBusiness = null;
 }
 
-function toggleFav(b) {
+/* ----------------------------------------------------------
+   Trolley stop and parking lot cards
+   ---------------------------------------------------------- */
+function placePills(p) {
+  if (p.kind === "troll") {
+    const color = LINE_COLOR[p.lineName] || "#999";
+    return `<span class="pill" style="background:${color}">${esc(p.lineName || "Trolley")} line</span>` +
+           (p.transfer ? `<span class="pill plain">Transfer</span>` : "");
+  }
+  return p.paid
+    ? `<span class="pill" style="background:var(--paid)">City parking · paid</span>`
+    : `<span class="pill" style="background:var(--blue)">Free parking</span>`;
+}
+
+function openPlaceCard(p) {
+  currentBusiness = null;
+  const isFav = getFavs().has(p.id);
+  const sheet = $("#sheet");
+  sheet.innerHTML = `
+    <button class="xbtn" id="closeCard" aria-label="Close">✕</button>
+    <div class="grab"></div>
+    <div class="row">${placePills(p)}</div>
+    <div class="namerow">
+      <div class="name">${p.kind === "troll" ? `Stop ${esc(p.num)} · ` : ""}${esc(p.name)}</div>
+      <button class="heart" id="fav" aria-label="Save to favorites">${isFav ? "❤️" : "🤍"}</button>
+    </div>
+    ${p.kind === "troll" && p.freePark ? `<div class="row"><span class="pill" style="background:var(--blue)">Free parking near this stop</span></div>` : ""}
+    ${p.address ? `<a class="addr" href="${mapsUrl(p)}">📍 ${esc(p.address)}</a>` : ""}
+    ${p.closest ? `<div class="row">Closest business: ${esc(p.closest)}</div>` : ""}
+    ${p.kind === "troll" && p.spots.length ? `<div class="row">Parking spots: ${esc(p.spots.join(", "))}</div>` : ""}`;
+  $("#closeCard").onclick = closeSheet;
+  $("#fav").onclick = () => toggleFav(p);
+  sheet.scrollTop = 0;
+  sheet.classList.add("open");
+  if (p.lat != null) map.panTo([p.lat, p.lng]);
+}
+
+function toggleFav(item) {
   const favs = getFavs();
-  if (favs.has(b.id)) favs.delete(b.id); else favs.add(b.id);
+  if (favs.has(item.id)) favs.delete(item.id); else favs.add(item.id);
   saveFavs(favs);
   const btn = $("#fav");
   if (btn) {
-    btn.textContent = favs.has(b.id) ? "❤️" : "🤍";
+    btn.textContent = favs.has(item.id) ? "❤️" : "🤍";
     btn.classList.remove("bounce"); void btn.offsetWidth; btn.classList.add("bounce");
   }
-  // If the Favorites filter is on, the map list changes right away
+  // If the Favorites filter is on, the map changes right away
   if (filterState.favOnly) applyFilters(false);
+  else renderLayers();
   updateChipCounts();
   if ($("#favSheet").classList.contains("open")) renderFavList();
+  if ($("#trollSheet").classList.contains("open")) renderTrolleyList();
+  if ($("#parkSheet").classList.contains("open")) renderParkingList();
 }
 
 /* ----------------------------------------------------------
@@ -790,44 +979,83 @@ function renderElfList() {
 }
 
 /* ----------------------------------------------------------
-   Favorites tab
+   Shared list rows for Favorites, Trolley, and Parking
    ---------------------------------------------------------- */
-function openFav() {
-  closeAllPanels();
-  renderFavList();
-  $("#favSheet").classList.add("open");
-  setTab("fav");
+function heartLabel(item) { return getFavs().has(item.id) ? "❤️" : "🤍"; }
+
+function placeRow(p) {
+  return `
+    <div class="elfrow">
+      <div class="top">
+        <div>
+          <div class="elfname">${p.kind === "troll" ? `Stop ${esc(p.num)} · ` : ""}${esc(p.name)}</div>
+          <div class="row" style="margin-top:4px">${placePills(p)}${p.kind === "troll" && p.freePark ? `<span class="pill" style="background:var(--blue)">Free parking</span>` : ""}</div>
+          ${p.address ? `<div class="detail">${esc(p.address)}</div>` : ""}
+          ${p.closest ? `<div class="detail">Closest business: ${esc(p.closest)}</div>` : ""}
+          ${p.kind === "troll" && p.spots.length ? `<div class="detail">Parking spots: ${esc(p.spots.join(", "))}</div>` : ""}
+          <div class="detail"><a href="${mapsUrl(p)}">🧭 Directions</a></div>
+        </div>
+        <div class="side">
+          <button class="btn small" data-show="${p.id}">📍 Show on map</button>
+          <button class="btn small" data-fav="${p.id}" aria-label="Save to favorites">${heartLabel(p)}</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderTrolleyList() {
+  const list = placesOf("troll").sort((a, b) => Number(a.num) - Number(b.num));
+  $("#trollSheet").innerHTML = `
+    <button class="xbtn" data-close="troll" aria-label="Back to map">✕</button>
+    <div class="grab"></div>
+    <div class="name">🚋 Trolley Stops</div>
+    <div class="notice">${esc(CONFIG.trolleyInfo)}</div>
+    <div class="elflist">${list.length ? list.map(placeRow).join("") : `<div class="empty">Trolley stops will show up here once they're connected.</div>`}</div>`;
+}
+
+function renderParkingList() {
+  const free = placesOf("park").filter(p => !p.paid).sort((a, b) => a.name.localeCompare(b.name));
+  const paid = placesOf("park").filter(p => p.paid).sort((a, b) => a.name.localeCompare(b.name));
+  const section = (title, items) => items.length
+    ? `<div class="flabel grouphead">${title}</div>${items.map(placeRow).join("")}` : "";
+  $("#parkSheet").innerHTML = `
+    <button class="xbtn" data-close="park" aria-label="Back to map">✕</button>
+    <div class="grab"></div>
+    <div class="name">🅿️ Parking</div>
+    ${section("Free parking", free)}
+    ${section("City parking · paid", paid)}
+    ${!free.length && !paid.length ? `<div class="empty">Parking will show up here once it's connected.</div>` : ""}`;
 }
 
 function renderFavList() {
-  const favs = getFavs();
+  const list = favItems().sort((a, b) => {
+    const order = { biz: 0, troll: 1, park: 2 };
+    return (order[a.kind] - order[b.kind]) || a.name.localeCompare(b.name);
+  });
   const names = getElves();
-  const list = businesses
-    .filter(b => favs.has(b.id))
-    .sort((a, b) => a.district.localeCompare(b.district) || a.name.localeCompare(b.name));
-
-  const rows = list.length ? list.map(b => {
-    const c = colorFor(b.district);
+  const rows = list.length ? list.map(item => {
+    if (item.kind !== "biz") return placeRow(item);
+    const c = colorFor(item.district);
     let elfNote = "";
-    if (b.elf) elfNote = names[b.id] ? '<span class="found-tag">🧝 ✓ Found</span>' : '<span class="small">🧝 Elf Hunt location</span>';
+    if (item.elf) elfNote = names[item.id] ? '<span class="found-tag">🧝 ✓ Found</span>' : '<span class="small">🧝 Elf Hunt location</span>';
     return `
       <div class="elfrow">
         <div class="top">
           <div>
-            <div class="elfname">${esc(b.name)}</div>
-            <div class="cat" style="font-size:12px">${esc(b.category)}</div>
+            <div class="elfname">${esc(item.name)}</div>
+            <div class="cat" style="font-size:12px">${esc(item.category)}</div>
             <div class="row" style="margin-top:4px">
-              <span class="pill" style="background:${c.color};color:${c.text}">${esc(b.district)}</span>
+              <span class="pill" style="background:${c.color};color:${c.text}">${esc(item.district)}</span>
               ${elfNote}
             </div>
           </div>
-          <div style="display:flex;gap:6px;flex:none">
-            <button class="btn small" data-fav-map="${b.id}">📍 Show on map</button>
-            <button class="btn small" data-fav-remove="${b.id}" aria-label="Remove from favorites">❤️</button>
+          <div class="side">
+            <button class="btn small" data-show="${item.id}">📍 Show on map</button>
+            <button class="btn small" data-fav="${item.id}" aria-label="Remove from favorites">❤️</button>
           </div>
         </div>
       </div>`;
-  }).join("") : `<div class="empty">No favorites yet. Tap 🤍 on any shop to save it here.</div>`;
+  }).join("") : `<div class="empty">No favorites yet. Tap 🤍 on any shop, trolley stop, or parking lot to save it here.</div>`;
 
   $("#favSheet").innerHTML = `
     <button class="xbtn" data-close="fav" aria-label="Back to map">✕</button>
@@ -837,28 +1065,23 @@ function renderFavList() {
     <div class="elflist">${rows}</div>`;
 }
 
-/* ----------------------------------------------------------
-   Trolley and Parking tabs (placeholders until the sheet is connected)
-   ---------------------------------------------------------- */
+function openFav() {
+  closeAllPanels();
+  renderFavList();
+  $("#favSheet").classList.add("open");
+  setTab("fav");
+}
+
 function openTrolley() {
   closeAllPanels();
-  $("#trollSheet").innerHTML = `
-    <button class="xbtn" data-close="troll" aria-label="Back to map">✕</button>
-    <div class="grab"></div>
-    <div class="name">🚋 Trolley Stops</div>
-    <div class="notice">${esc(CONFIG.trolleyInfo)}</div>
-    <div class="empty">Trolley stops will show up here once they're connected.</div>`;
+  renderTrolleyList();
   $("#trollSheet").classList.add("open");
   setTab("troll");
 }
 
 function openParking() {
   closeAllPanels();
-  $("#parkSheet").innerHTML = `
-    <button class="xbtn" data-close="park" aria-label="Back to map">✕</button>
-    <div class="grab"></div>
-    <div class="name">🅿️ Parking</div>
-    <div class="empty">Parking spots will show up here once they're connected.</div>`;
+  renderParkingList();
   $("#parkSheet").classList.add("open");
   setTab("park");
 }
@@ -871,12 +1094,12 @@ function openFilters() {
 }
 
 /* ----------------------------------------------------------
-   Taps inside the Elf Hunt and Favorites tabs
+   Taps inside lists
    ---------------------------------------------------------- */
+// Elf Hunt tab
 $("#elfSheet").addEventListener("click", e => {
   const t = e.target.closest("button, a");
   if (!t) return;
-  if (t.dataset.close) { goMap(); return; }
   if (t.dataset.view) { elfView.view = t.dataset.view; renderElfList(); return; }
   if (t.dataset.districtFilter) { elfView.district = t.dataset.districtFilter; renderElfList(); return; }
   if (t.dataset.save) {
@@ -900,25 +1123,18 @@ $("#elfSheet").addEventListener("click", e => {
   }
 });
 
-$("#favSheet").addEventListener("click", e => {
-  const t = e.target.closest("button");
-  if (!t) return;
-  if (t.dataset.close) { goMap(); return; }
-  if (t.dataset.favMap) {
-    const b = businesses.find(x => x.id === t.dataset.favMap);
-    if (b) showOnMap(b);
-    return;
-  }
-  if (t.dataset.favRemove) {
-    const b = businesses.find(x => x.id === t.dataset.favRemove);
-    if (b) toggleFav(b);
-  }
-});
+// Favorites, Trolley, and Parking tabs share the same Show on map and heart buttons
+function onListClick(e) {
+  const show = e.target.closest("[data-show]");
+  if (show) { const item = byId.get(show.dataset.show); if (item) showOnMap(item); return; }
+  const fav = e.target.closest("[data-fav]");
+  if (fav) { const item = byId.get(fav.dataset.fav); if (item) toggleFav(item); }
+}
+for (const id of ["favSheet", "trollSheet", "parkSheet"]) $("#" + id).addEventListener("click", onListClick);
 
-// Every ✕ and "back" button in the panels returns to the map
+// Every ✕ in the panels returns to the map
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-close]");
-  if (t) goMap();
+  if (e.target.closest("[data-close]")) goMap();
 });
 
 /* ----------------------------------------------------------
@@ -946,21 +1162,25 @@ $("#tabPark").onclick = openParking;
 $("#filterBtn").onclick = openFilters;
 
 /* ----------------------------------------------------------
-   Startup + periodic refresh from the sheet
+   Startup + periodic refresh from the sheets
    ---------------------------------------------------------- */
 let firstLoad = true;
 async function init() {
-  const { list, source } = await loadBusinesses();
+  const [{ list, source }, placeList] = await Promise.all([loadBusinesses(), loadPlaces()]);
   if (source === "none") {
     $("#status").textContent = "Couldn't load shops. Check your connection and refresh.";
     return;
   }
   businesses = list;
+  places = placeList;
+  byId = new Map([...businesses, ...places].map(i => [i.id, i]));
   buildFilters();
   applyFilters(firstLoad);
   $("#status").textContent += ` · ${source === "live" ? "live" : "saved copy"}`;
   if ($("#elfSheet").classList.contains("open") && document.activeElement?.tagName !== "INPUT") renderElfList();
   if ($("#favSheet").classList.contains("open")) renderFavList();
+  if ($("#trollSheet").classList.contains("open")) renderTrolleyList();
+  if ($("#parkSheet").classList.contains("open")) renderParkingList();
   firstLoad = false;
 }
 
