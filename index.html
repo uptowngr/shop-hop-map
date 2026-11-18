@@ -44,7 +44,7 @@
   .pin-elf{position:absolute;right:-6px;top:-8px;width:20px;height:20px;border-radius:50%;background:var(--sunshine);
     font-size:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.25)}
   .pin-label{position:absolute;left:40px;top:50%;transform:translateY(-50%);white-space:nowrap;
-    background:rgba(255,255,255,.98);border-radius:8px;padding:2px 6px;font-size:12px;font-weight:700;
+    background:rgba(255,255,255,.8);border-radius:8px;padding:2px 6px;font-size:12px;font-weight:700;
     box-shadow:0 1px 4px rgba(0,0,0,.2);display:none;pointer-events:none;color:var(--ink)}
   #map.show-labels .pin-label{display:block}
   #map .pin-label.hidden{display:none}
@@ -321,27 +321,6 @@ function passes(b) {
          (!filterState.favOnly || favs.has(b.id));
 }
 
-// Nudge businesses that sit on (or almost on) the same spot into a small ring (~10–20 m).
-// Directions and the card still use the real coordinates.
-function spreadPins(list) {
-  const placed = [];
-  for (const b of list) {
-    b.dispLat = b.lat;
-    b.dispLng = b.lng;
-    if (b.lat == null) continue;
-    let n = 0;
-    for (const p of placed) {
-      if (Math.abs(p.lat - b.lat) < 0.00012 && Math.abs(p.lng - b.lng) < 0.00016) n++;
-    }
-    if (n) {
-      const r = 0.00012 * n, a = n * 2.4;
-      b.dispLat = b.lat + r * Math.sin(a);
-      b.dispLng = b.lng + (r * Math.cos(a)) / 0.73;   // longitude degrees are shorter here
-    }
-    placed.push(b);
-  }
-}
-
 // Hide business names that would overlap a name already on screen (zoomed in only)
 function updateLabelCollisions() {
   if (map.getZoom() < CONFIG.labelZoom) return;
@@ -372,8 +351,8 @@ function applyFilters(fit) {
   const markers = [];
   let unplaced = 0;
   for (const b of shown) {
-    if (b.dispLat == null) { unplaced++; continue; }
-    const m = L.marker([b.dispLat, b.dispLng], { icon: pinIcon(b), title: b.name, keyboard: true });
+    if (b.lat == null) { unplaced++; continue; }
+    const m = L.marker([b.lat, b.lng], { icon: pinIcon(b), title: b.name, keyboard: true });
     m.on("click", () => openSheet(b));
     markers.push(m);
   }
@@ -545,7 +524,6 @@ async function init() {
     return;
   }
   const sourceNote = source === "live" ? "live" : "saved copy";
-  spreadPins(list);
   businesses = list;
   buildFilters();
   applyFilters(firstLoad);
