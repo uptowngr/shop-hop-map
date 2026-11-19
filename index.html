@@ -34,6 +34,18 @@
     background:rgba(255,255,255,.96);color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.12);cursor:pointer}
   .fbtn.on{background:var(--evergreen);color:#fff}
 
+  /* "Find me" button (top right) and the you-are-here dot */
+  .locbtn{position:fixed;z-index:1000;right:12px;top:calc(max(12px,env(safe-area-inset-top)) + 82px);width:44px;height:44px;border:0;border-radius:50%;
+    background:rgba(255,255,255,.96);box-shadow:0 2px 8px rgba(0,0,0,.12);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .locbtn.on{background:#1a73e8}
+  .locbtn.busy{animation:locpulse 1s ease-in-out infinite}
+  @keyframes locpulse{50%{opacity:.45}}
+  .me{width:22px;height:22px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 0 0 2px rgba(26,115,232,.35),0 2px 6px rgba(0,0,0,.35)}
+  .toast{position:fixed;z-index:1200;left:50%;transform:translateX(-50%);top:calc(max(12px,env(safe-area-inset-top)) + 134px);max-width:min(92vw,420px);
+    background:var(--ink);color:#fff;font-size:14px;line-height:1.35;padding:10px 14px;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,.25);
+    opacity:0;pointer-events:none;transition:opacity .25s}
+  .toast.show{opacity:1}
+
   /* Filter sheet pieces */
   .flabel{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:16px 0 6px}
   .chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 4px}
@@ -144,6 +156,8 @@
 <div class="filters">
   <button class="fbtn" id="filterBtn">Filters</button>
 </div>
+<button class="locbtn" id="locBtn" aria-label="Show my location" title="Show my location">📍</button>
+<div class="toast" id="toast" role="status"></div>
 
 <div class="sheet" id="sheet" aria-live="polite"></div>
 <div class="sheet tall" id="filterSheet"></div>
@@ -1206,6 +1220,91 @@ $("#tabFav").onclick = openFav;
 $("#tabTroll").onclick = openTrolley;
 $("#tabPark").onclick = openParking;
 $("#filterBtn").onclick = openFilters;
+
+/* ----------------------------------------------------------
+   Live location. Only asks after someone taps 📍. If they've
+   allowed it before, the dot comes back on its own next visit.
+   The map centers on them only when they tap, never on its own.
+   ---------------------------------------------------------- */
+const loc = { watchId: null, wanted: false, centerNext: false, dot: null, ring: null };
+let toastTimer;
+function toast(msg, ms = 4500) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), ms);
+}
+
+function onPosition(pos) {
+  const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+  const here = [lat, lng];
+  $("#locBtn").classList.remove("busy");
+  $("#locBtn").classList.add("on");
+  if (!loc.dot) {
+    loc.ring = L.circle(here, { radius: accuracy, color: "#1a73e8", weight: 1, opacity: .4, fillOpacity: .1, interactive: false }).addTo(map);
+    loc.dot = L.marker(here, {
+      icon: L.divIcon({ className: "", html: '<div class="me"></div>', iconSize: [22, 22], iconAnchor: [11, 11] }),
+      interactive: false, keyboard: false, zIndexOffset: 3000,
+    }).addTo(map);
+  } else {
+    loc.dot.setLatLng(here);
+    loc.ring.setLatLng(here).setRadius(accuracy);
+  }
+  if (loc.centerNext) {
+    loc.centerNext = false;
+    if (map.distance(here, CONFIG.center) > 10000) {
+      toast("Your blue dot is on, but you're not in Uptown yet. See you there!");
+    } else {
+      map.flyTo(here, Math.max(map.getZoom(), 16), { duration: .8 });
+    }
+  }
+}
+
+function onPositionError(err) {
+  $("#locBtn").classList.remove("busy");
+  if (err.code === 1) {            // permission denied
+    stopLocation();
+    loc.wanted = false;
+    toast("Location is turned off for this map. To use it, allow location for this site in your browser settings, then tap 📍 again.", 7000);
+  } else if (loc.centerNext) {     // only complain if they just tapped
+    loc.centerNext = false;
+    toast("Couldn't find your location. Try again in a moment.");
+  }
+}
+
+function startLocation() {
+  if (loc.watchId != null) return;
+  loc.watchId = navigator.geolocation.watchPosition(onPosition, onPositionError,
+    { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 });
+}
+function stopLocation() {
+  if (loc.watchId != null) navigator.geolocation.clearWatch(loc.watchId);
+  loc.watchId = null;
+}
+
+$("#locBtn").onclick = () => {
+  if (!("geolocation" in navigator)) { toast("This browser can't share your location."); return; }
+  loc.wanted = true;
+  loc.centerNext = true;
+  if (loc.dot && loc.watchId != null) {           // already on: just re-center
+    onPosition({ coords: { latitude: loc.dot.getLatLng().lat, longitude: loc.dot.getLatLng().lng, accuracy: loc.ring.getRadius() } });
+    return;
+  }
+  $("#locBtn").classList.add("busy");
+  startLocation();
+};
+
+// Save battery: stop tracking while the app is in the background
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) stopLocation();
+  else if (loc.wanted) startLocation();
+});
+
+// Returning visitors who already allowed location get the dot without a prompt
+navigator.permissions?.query({ name: "geolocation" }).then(status => {
+  if (status.state === "granted") { loc.wanted = true; startLocation(); }
+}).catch(() => {});
 
 /* ----------------------------------------------------------
    Startup + periodic refresh from the sheets
