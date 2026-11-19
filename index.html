@@ -182,6 +182,9 @@ const CONFIG = {
   zoom: 14,
   labelZoom: 16,          // business names appear at this zoom and closer
   refreshMinutes: 5,
+  // Trolley route lines, exported from Google My Maps as KML. Layer or line names
+  // must contain "Green" or "Red" to pick up that route's color.
+  routesKml: "routes.kml",
   // Categories offered in the dropdown (rows with other values still show on the map)
   categories: ["Clothing", "Foodie", "Pamper", "Trinket & Home Improvement", "Event"],
   elf: {
@@ -472,6 +475,7 @@ const cluster = L.markerClusterGroup({
 map.addLayer(cluster);
 
 // Parking and trolley pins sit on their own layers so they never get hidden in a business cluster
+const routeLayer = L.layerGroup().addTo(map);   // faint route lines, under all pins
 const parkLayer = L.layerGroup().addTo(map);
 const trollLayer = L.layerGroup().addTo(map);
 
@@ -587,8 +591,46 @@ function applyFilters(fit) {
   setTimeout(updateLabelCollisions, 400);   // give clusters time to finish animating
 }
 
+// Reads every line in the KML file: [{ line: "Green", points: [[lat, lng], ...] }]
+let routes = [];
+async function loadRoutes() {
+  try {
+    const res = await fetch(CONFIG.routesKml, { cache: "no-cache" });
+    if (!res.ok) return;
+    const doc = new DOMParser().parseFromString(await res.text(), "application/xml");
+    routes = [];
+    for (const pm of doc.querySelectorAll("Placemark")) {
+      const coords = pm.querySelector("LineString > coordinates");
+      if (!coords) continue;
+      const folder = pm.closest("Folder")?.querySelector(":scope > name")?.textContent || "";
+      const label = `${pm.querySelector(":scope > name")?.textContent || ""} ${folder}`.toLowerCase();
+      const line = Object.keys(LINE_COLOR).find(k => label.includes(k.toLowerCase()));
+      if (!line) continue;
+      const points = coords.textContent.trim().split(/\s+/)
+        .map(c => c.split(",").map(Number))
+        .filter(([lng, lat]) => isFinite(lat) && isFinite(lng))
+        .map(([lng, lat]) => [lat, lng]);
+      if (points.length > 1) routes.push({ line, points });
+    }
+    // Green first and wider, red on top and thinner, so shared streets show both colors
+    routes.sort((a, b) => (a.line === "Green" ? -1 : 1) - (b.line === "Green" ? -1 : 1));
+  } catch (e) { /* no routes file: the map works without the lines */ }
+}
+
+function renderRoutes() {
+  routeLayer.clearLayers();
+  if (!filterState.layers.troll || filterState.favOnly) return;
+  for (const r of routes) {
+    L.polyline(r.points, {
+      color: LINE_COLOR[r.line], weight: r.line === "Green" ? 8 : 4, opacity: 0.45,
+      lineCap: "round", lineJoin: "round", interactive: false,
+    }).addTo(routeLayer);
+  }
+}
+
 // Parking and trolley pins, respecting the layer toggles and the Favorites filter
 function renderLayers() {
+  renderRoutes();
   parkLayer.clearLayers();
   trollLayer.clearLayers();
   const favs = getFavs();
@@ -1184,6 +1226,7 @@ async function init() {
   firstLoad = false;
 }
 
+loadRoutes().then(renderRoutes);   // route lines load once; they don't change during the event
 init();
 setInterval(init, CONFIG.refreshMinutes * 60 * 1000);
 </script>
