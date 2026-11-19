@@ -543,11 +543,11 @@ function updateLabelCollisions() {
    Filters (in a sheet opened by the Filters button).
    District, category, and Elf Hunt / Events / Favorites narrow the
    businesses on the map. Favorites also narrows parking and trolley pins.
-   Parking and trolley layers are on by default.
+   Parking, trolley stop, and trolley route layers are on by default.
    ---------------------------------------------------------- */
 const filterState = {
   district: "All", category: "All", elf: false, events: false, favOnly: false,
-  layers: { park: true, troll: true },
+  layers: { park: true, troll: true, routes: true },
 };
 let businesses = [];
 let places = [];
@@ -619,7 +619,7 @@ async function loadRoutes() {
 
 function renderRoutes() {
   routeLayer.clearLayers();
-  if (!filterState.layers.troll || filterState.favOnly) return;
+  if (!filterState.layers.routes) return;
   for (const r of routes) {
     L.polyline(r.points, {
       color: LINE_COLOR[r.line], weight: r.line === "Green" ? 8 : 4, opacity: 0.45,
@@ -743,9 +743,13 @@ function buildFilters() {
     on: filterState.layers.park,
     onClick: () => setFilter(() => { filterState.layers.park = !filterState.layers.park; }, false),
   }));
-  ly.appendChild(chip(`🚋 Trolley stops (${counts.troll})`, {
+  ly.appendChild(chip(`🚏 Trolley stops (${counts.troll})`, {
     on: filterState.layers.troll,
     onClick: () => setFilter(() => { filterState.layers.troll = !filterState.layers.troll; }, false),
+  }));
+  if (routes.length) ly.appendChild(chip(`〰️ Trolley routes`, {
+    on: filterState.layers.routes,
+    onClick: () => setFilter(() => { filterState.layers.routes = !filterState.layers.routes; }, false),
   }));
 
   $("#fClear").onclick = () => {
@@ -1226,7 +1230,8 @@ async function init() {
   firstLoad = false;
 }
 
-loadRoutes().then(renderRoutes);   // route lines load once; they don't change during the event
+// Route lines load once (they don't change during the event), then add their Filters toggle
+loadRoutes().then(() => { renderRoutes(); if (businesses.length) buildFilters(); });
 init();
 setInterval(init, CONFIG.refreshMinutes * 60 * 1000);
 </script>
