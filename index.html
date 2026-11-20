@@ -246,7 +246,7 @@ const CONFIG = {
   },
   trolleyLastCall: "Last call for the trolleys is 8:30 PM, and all trolleys return to the Fulton Street Market at 9 PM.",
   contactEmail: "events@uptowngr.com",
-  newsletterUrl: "https://uptowngr.com/",   // swap in the direct sign-up link when you have it
+  newsletterUrl: "https://uptowngr.myflodesk.com/pcd9vlak9n",
   welcomeGraphic: "welcome-gifts.png",
   trolleyRoutes: "Our trolley transport includes two routes and 15 total stops. Please note that you can transfer to the other line at stops 10 and 11.",
   social: {
@@ -1385,11 +1385,11 @@ function renderInfo() {
       </ul>
     </div>
 
+    <div class="btnrow"><button class="btn primary" data-close="info">Start exploring</button></div>
     <div class="btnrow">
       <a class="btn" href="mailto:${esc(CONFIG.contactEmail)}?subject=${encodeURIComponent("Shop Hop question")}">✉️ Email us</a>
       <a class="btn" href="${esc(CONFIG.newsletterUrl)}" target="_blank" rel="noopener">📰 Get our newsletter</a>
     </div>
-    <div class="btnrow"><button class="btn primary" data-close="info">Start exploring</button></div>
     <div class="social">
       <a href="${esc(CONFIG.social.facebook)}" target="_blank" rel="noopener" aria-label="Uptown GR on Facebook" title="Facebook">
         <svg viewBox="0 0 24 24"><path d="M15 3h-2.5A3.5 3.5 0 0 0 9 6.5V10H6.5v3.5H9V21h3.5v-7.5H15l.5-3.5h-3V7a1 1 0 0 1 1-1H15z" fill="currentColor" stroke="none"/></svg></a>
@@ -1398,7 +1398,9 @@ function renderInfo() {
       <a href="${esc(CONFIG.social.website)}" target="_blank" rel="noopener" aria-label="Uptown GR website" title="uptowngr.com">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></a>
     </div>
-    <div class="small" style="text-align:center;margin:10px 0 4px">#UptownShopHop · #ShopLocalGR · #UptownGR</div>`;
+    <div class="small" style="text-align:center;margin:10px 0 4px">#UptownShopHop · #ShopLocalGR · #UptownGR</div>
+    <div class="small" style="text-align:center;margin:14px 0 2px;font-size:11px">Designed with 💚 by Uptown GR</div>
+    <div class="small" style="text-align:center;margin:0 0 6px;font-size:11px">© ${new Date().getFullYear()} Uptown Grand Rapids, Inc.<br>Map data © OpenStreetMap contributors</div>`;
 }
 
 function openInfo() {
