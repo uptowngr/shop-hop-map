@@ -29,6 +29,7 @@
     box-shadow:0 4px 18px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:space-between;gap:10px}
   .brand{font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--evergreen);font-size:17px;line-height:1.1}
   .brand small{display:block;color:var(--santa);font-size:12px;letter-spacing:.08em}
+  .brandlogo{display:block;height:28px;width:auto;margin-bottom:3px}
   .status{font-size:12px;color:var(--muted);text-align:right;line-height:1.3;flex:1;min-width:0}
   .infobtn{flex:none;width:40px;height:40px;border-radius:50%;border:0;background:var(--evergreen);color:#fff;font-family:Georgia,serif;font-style:italic;
     font-weight:700;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.15)}
@@ -161,6 +162,17 @@
 
   /* Welcome / info sheet */
   .welcome-art{display:block;height:170px;width:auto;margin:6px auto 2px}
+  .installtip{background:#fff;border:2px dashed var(--grinchy);border-radius:16px;padding:10px 14px;margin:40px 0 8px;font-size:14px;line-height:1.45}
+  .installtip b{color:var(--evergreen)}
+  .sponsors{margin-top:22px;text-align:center}
+  .sponsors h3{margin:0 0 4px;font-size:17px}
+  .tier{margin-top:12px}
+  .tierlabel{display:inline-block;color:#fff;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px}
+  .logos{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:8px}
+  .logos button{border:1px solid #e6ebe7;background:#fff;border-radius:12px;padding:6px;width:96px;height:64px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .logos button[disabled]{cursor:default}
+  .logos img{max-width:100%;max-height:100%;object-fit:contain}
+  .tiernames{font-size:13px;margin-top:6px;line-height:1.5}
   .social{display:flex;justify-content:center;gap:14px;margin-top:16px}
   .social a{width:46px;height:46px;border-radius:50%;background:var(--evergreen);color:#fff;display:flex;align-items:center;justify-content:center}
   .social svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -189,7 +201,7 @@
 <div id="map"></div>
 
 <div class="header">
-  <div class="brand">Uptown<br>Shop Hop<small>Thu, Dec 3 · 3–9 PM</small></div>
+  <div class="brand"><img class="brandlogo" src="logo-header.png" alt="Uptown Shop Hop"><small>Thu, Dec 3 · 3–9 PM</small></div>
   <div class="status" id="status">Loading shops…</div>
   <button class="infobtn" id="infoBtn" aria-label="About Shop Hop and how to use this map">i</button>
 </div>
@@ -259,6 +271,26 @@ const CONFIG = {
   newsletterUrl: "https://uptowngr.myflodesk.com/pcd9vlak9n",
   welcomeGraphic: "welcome-gifts.png",
   trolleyRoutes: "Our trolley transport includes two routes and 15 total stops. Please note that you can transfer to the other line at stops 10 and 11.",
+  // Sponsors by level. "logo" is a file in the sponsors folder; leave it out to show the name instead.
+  sponsors: [
+    { level: "Blue", color: "#2059fe", names: [
+      { name: "Dime & Regal", logo: "dime-regal.png" },
+      { name: "Terra Bagel", logo: "terra-bagel.png" },
+      { name: "Terra", logo: "terra.png" } ] },
+    { level: "Red", color: "#e73221", names: [
+      { name: "Wealthy St Bakery", logo: "wealthy-street-bakery.png" },
+      { name: "Sticky Fingers", logo: "sticky-fingers.png" },
+      { name: "Rebel", logo: "rebel.png" },
+      { name: "Pursuit Of Happiness Co.", logo: "pursuit-of-happiness.png" } ] },
+    { level: "Green", color: "#108342", names: [
+      { name: "Vintage Charm", logo: "vintage-charm.png" },
+      { name: "Ash & Elm Quiltery", logo: "ash-elm.png" },
+      { name: "Opera Grand Rapids", logo: "opera-grand-rapids.png" },
+      { name: "Reagan Marketing + Design", logo: "reagan-marketing.png" },
+      { name: "Thai Table", logo: "thai-table.png" } ] },
+    { level: "Pink", color: "#f098c0", names: [
+      { name: "Yesterdog" }, { name: "Riverside Market" }, { name: "Vinyl Alchemy" }, { name: "Quarantinos" } ] },
+  ],
   social: {
     facebook: "https://www.facebook.com/uptowngr",
     instagram: "https://www.instagram.com/uptowngr/",
@@ -1395,11 +1427,45 @@ function openBiz() {
    Info / welcome sheet (ⓘ in the header; opens by itself on a first visit)
    ---------------------------------------------------------- */
 const WELCOME_KEY = "shophop.welcomed.v1";
+
+// "Add to home screen" tip, worded for the phone in hand; hidden once the app is opened from the home screen
+function installTip() {
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  if (standalone) return "";
+  const ua = navigator.userAgent;
+  const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const android = /Android/.test(ua);
+  const iosSteps = `<b>iPhone:</b> tap the Share button <span aria-hidden="true">⬆️</span>, then <b>Add to Home Screen</b>.`;
+  const androidSteps = `<b>Android:</b> tap the menu <b>⋮</b>, then <b>Add to Home screen</b>.`;
+  const steps = ios ? iosSteps : android ? androidSteps : `${iosSteps}<br>${androidSteps}`;
+  return `<div class="installtip">📲 <b>Save this map to your home screen</b> so it's one tap away on Shop Hop night.<br>${steps}</div>`;
+}
+
+// Sponsor logos by level; a logo opens that business on the map when it's in the sheet
+function sponsorsHtml() {
+  const norm = t => String(t).toLowerCase().replace(/&/g, "and").replace(/\bstreet\b/g, "st").replace(/\bco\b\.?/g, "").replace(/[^a-z0-9]/g, "");
+  const findBiz = name => { const n = norm(name); return businesses.find(b => norm(b.name) === n); };
+  const tiers = CONFIG.sponsors.map(t => {
+    const withLogo = t.names.filter(x => x.logo), noLogo = t.names.filter(x => !x.logo);
+    const logos = withLogo.map(x => {
+      const b = findBiz(x.name);
+      return `<button ${b ? `data-sponsor="${esc(b.id)}" aria-label="Show ${esc(x.name)} on the map"` : "disabled"} title="${esc(x.name)}">
+        <img src="sponsors/${esc(x.logo)}" alt="${esc(x.name)}" loading="lazy"></button>`;
+    }).join("");
+    return `<div class="tier">
+      <span class="tierlabel" style="background:${t.color}${t.level === "Pink" ? ";color:var(--ink)" : ""}">${esc(t.level)} level</span>
+      ${logos ? `<div class="logos">${logos}</div>` : ""}
+      ${noLogo.length ? `<div class="tiernames">${noLogo.map(x => esc(x.name)).join(" · ")}</div>` : ""}
+    </div>`;
+  }).join("");
+  return `<div class="sponsors"><h3>Thank you to our sponsors! 💙❤️💚🩷</h3>${tiers}</div>`;
+}
 function renderInfo() {
   const turnIn = CONFIG.elf.turnIn.join(" or ");
   $("#infoSheet").innerHTML = `
     <button class="xbtn" data-close="info" aria-label="Close">✕</button>
     <div class="grab"></div>
+    ${installTip()}
     <img class="welcome-art" src="${esc(CONFIG.welcomeGraphic)}" alt="A stack of wrapped holiday gifts">
     <div class="welcome-title">Uptown Shop Hop</div>
     <p class="lede">Uptown's favorite holiday tradition is back for year 29! Spend a festive night shopping local, grabbing a bite and catching live entertainment across all four Uptown districts: Eastown, East Fulton, East Hills and Wealthy Street. 🎄</p>
@@ -1448,7 +1514,8 @@ function renderInfo() {
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></a>
     </div>
     <div class="small" style="text-align:center;margin:10px 0 4px">#UptownShopHop · #ShopLocalGR · #UptownGR</div>
-    <div class="small" style="text-align:center;margin:14px 0 2px;font-size:11px">Designed with 💚 by Uptown GR</div>
+    ${sponsorsHtml()}
+    <div class="small" style="text-align:center;margin:18px 0 2px;font-size:11px">Designed with 💚 by Uptown GR</div>
     <div class="small" style="text-align:center;margin:0 0 6px;font-size:11px">© ${new Date().getFullYear()} Uptown Grand Rapids, Inc.<br>Map data © OpenStreetMap contributors</div>`;
 }
 
@@ -1623,6 +1690,10 @@ map.on("click", closeSheet);
 
 $("#tabElf").onclick = openElf;
 $("#tabFav").onclick = openFav;
+$("#infoSheet").addEventListener("click", e => {
+  const t = e.target.closest("[data-sponsor]");
+  if (t) { const b = byId.get(t.dataset.sponsor); if (b) showOnMap(b); }
+});
 $("#tabBiz").onclick = openBiz;
 $("#infoBtn").onclick = openInfo;
 $("#tabEnt").onclick = openEnt;
@@ -1748,6 +1819,8 @@ async function init() {
   if ($("#parkSheet").classList.contains("open")) renderParkingList();
   if ($("#entSheet").classList.contains("open")) renderEntList();
   if ($("#bizSheet").classList.contains("open") && document.activeElement?.id !== "bizSearch") renderBizResults();
+  const sp = $("#infoSheet .sponsors");   // sponsor logos become tappable once businesses load
+  if (sp) sp.outerHTML = sponsorsHtml();
   firstLoad = false;
 }
 
