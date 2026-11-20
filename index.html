@@ -46,6 +46,13 @@
   .locbtn.busy{animation:locpulse 1s ease-in-out infinite}
   @keyframes locpulse{50%{opacity:.45}}
   .me{width:22px;height:22px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 0 0 2px rgba(26,115,232,.35),0 2px 6px rgba(0,0,0,.35)}
+  /* "Here it is" highlight after Show on map */
+  .hl{position:relative;width:76px;height:76px;pointer-events:none}
+  .hl::before,.hl::after{content:"";position:absolute;inset:0;border-radius:50%;border:5px solid var(--santa);
+    box-shadow:0 0 0 3px #fff, 0 0 14px rgba(231,50,33,.6);animation:hlpulse 1.2s ease-out infinite}
+  .hl::after{animation-delay:.6s}
+  @keyframes hlpulse{0%{transform:scale(.35);opacity:1}100%{transform:scale(1.15);opacity:0}}
+  @media (prefers-reduced-motion: reduce){.hl::before,.hl::after{animation:none;transform:scale(.7)}}
   .toast{position:fixed;z-index:1200;left:50%;transform:translateX(-50%);top:calc(max(12px,env(safe-area-inset-top)) + 134px);max-width:min(92vw,420px);
     background:var(--ink);color:#fff;font-size:14px;line-height:1.35;padding:10px 14px;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,.25);
     opacity:0;pointer-events:none;transition:opacity .25s}
@@ -687,8 +694,10 @@ function activeFilterCount() {
          filterState.elf + filterState.events + filterState.favOnly;
 }
 
+const markerById = new Map();   // business id -> its map pin (only pins that pass the filters)
 function applyFilters(fit) {
   cluster.clearLayers();
+  markerById.clear();
   const elves = getElves();
   const shown = businesses.filter(passes);
   const markers = [];
@@ -697,6 +706,7 @@ function applyFilters(fit) {
     if (b.lat == null) { unplaced++; continue; }
     const m = L.marker([b.lat, b.lng], { icon: pinIcon(b, elves), title: b.name, keyboard: true });
     m.on("click", () => openSheet(b));
+    markerById.set(b.id, m);
     markers.push(m);
   }
   cluster.addLayers(markers);
@@ -940,9 +950,44 @@ function goMap() {
 // Fly to any item and open its card (used by Show on map, Locate, and Favorites)
 function showOnMap(item) {
   goMap();
-  if (item.lat != null) map.flyTo([item.lat, item.lng], Math.max(map.getZoom(), 17));
-  if (item.kind === "biz") openSheet(item);
-  else openPlaceCard(item);
+  const open = () => (item.kind === "biz" ? openSheet(item) : openPlaceCard(item));
+  if (item.lat == null) { open(); return; }
+  const marker = item.kind === "biz" ? markerById.get(item.id) : null;
+  if (marker) {
+    // Zoom in until the pin is out of its cluster (or fanned out), then point at it
+    cluster.zoomToShowLayer(marker, () => {
+      const at = marker.getLatLng();
+      open();
+      panAboveCard(at, Math.max(map.getZoom(), 17));
+      highlight(at);
+    });
+  } else {
+    open();
+    panAboveCard([item.lat, item.lng], Math.max(map.getZoom(), 17));
+    highlight([item.lat, item.lng]);
+  }
+}
+
+// Center a spot in the part of the map that the bottom card doesn't cover
+function panAboveCard(latlng, zoom = map.getZoom()) {
+  const H = map.getSize().y;
+  const card = $("#sheet").classList.contains("open") ? $("#sheet").offsetHeight : 0;
+  const top = $(".filters").getBoundingClientRect().bottom + 8;   // below the header and Filters
+  const targetY = (top + (H - card)) / 2;                          // middle of the open strip
+  const pt = map.project(latlng, zoom).add([0, H / 2 - targetY]);
+  map.flyTo(map.unproject(pt, zoom), zoom, { duration: 0.6 });
+}
+
+// A pulsing red ring for a few seconds so the chosen spot is easy to find
+let hlMarker = null, hlTimer = null;
+function highlight(latlng) {
+  if (hlMarker) hlMarker.remove();
+  clearTimeout(hlTimer);
+  hlMarker = L.marker(latlng, {
+    icon: L.divIcon({ className: "", html: '<div class="hl"></div>', iconSize: [76, 76], iconAnchor: [38, 38] }),
+    interactive: false, keyboard: false, zIndexOffset: 4000,
+  }).addTo(map);
+  hlTimer = setTimeout(() => { hlMarker?.remove(); hlMarker = null; }, 4000);
 }
 
 /* ----------------------------------------------------------
@@ -993,7 +1038,7 @@ function openSheet(b) {
   if ($("#saveElf")) $("#saveElf").onclick = () => markElf(b, $("#elfName").value);
   sheet.scrollTop = 0;
   sheet.classList.add("open");
-  if (b.lat != null) map.panTo([b.lat, b.lng]);
+  if (b.lat != null) panAboveCard([b.lat, b.lng]);
 }
 
 function closeSheet() {
@@ -1042,7 +1087,7 @@ function openPlaceCard(p) {
   $("#fav").onclick = () => toggleFav(p);
   sheet.scrollTop = 0;
   sheet.classList.add("open");
-  if (p.lat != null) map.panTo([p.lat, p.lng]);
+  if (p.lat != null) panAboveCard([p.lat, p.lng]);
 }
 
 function toggleFav(item) {
