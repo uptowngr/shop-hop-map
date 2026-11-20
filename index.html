@@ -163,8 +163,11 @@
   .infocard h3{margin:0 0 4px;font-size:16px}
   .infocard p{margin:4px 0 0}
   .infocard ul{margin:4px 0 0;padding-left:18px}
-  .infocard.elf{background:#fff3c4}
-  .infocard.troll{background:#e9f6ee}
+  /* Light tints of the four district colors */
+  .infocard.eastown{background:#ffeadc}
+  .infocard.fulton{background:#dcedf8}
+  .infocard.hills{background:#fdf0d6}
+  .infocard.wealthy{background:#dbf4e5}
   .btnrow{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
   .btnrow .btn{text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px}
 
@@ -1356,25 +1359,13 @@ function renderInfo() {
     <div class="welcome-title">Uptown Shop Hop</div>
     <p class="lede">Uptown's favorite holiday tradition is back for year 29! Spend a festive night shopping local, grabbing a bite and catching live entertainment across all four Uptown districts: Eastown, East Fulton, East Hills and Wealthy Street. 🎄</p>
 
-    <div class="infocard">
+    <div class="infocard fulton">
       <h3>🗓 Shop Hop night</h3>
       <p><b>Thursday, Dec. 3 · 3–9 PM</b></p>
       <p>🛍 Local shops · 🍽 Food + drinks · 🎶 Entertainment · 🔔 Sleighbell Swing at the Fulton Street Market · 🎄 Eastown Tree Lighting at Harmony, 8 PM</p>
     </div>
 
-    <div class="infocard elf">
-      <h3>🧝 Elf Scavenger Hunt</h3>
-      <p><b>${esc(CONFIG.elf.dates)}</b></p>
-      <p>Real elves are hiding in shop windows all over Uptown! Find ${CONFIG.elf.goal}, write their names on your game card and turn it in at ${esc(turnIn)} by Dec. 18 for a chance to win one of five $150 gift cards. Track your finds in the Elf Hunt tab.</p>
-    </div>
-
-    <div class="infocard troll">
-      <h3>🚋 The Jolly Trolley</h3>
-      <p>FREE rides looping through all four districts on Shop Hop night.</p>
-      <p><b>⏰ ${esc(CONFIG.trolleyLastCall)}</b></p>
-    </div>
-
-    <div class="infocard">
+    <div class="infocard eastown">
       <h3>📱 How to use this map</h3>
       <ul>
         <li>Tap any pin for hours, specials and directions.</li>
@@ -1384,6 +1375,19 @@ function renderInfo() {
         <li>The tabs below list every business, entertainment, trolley stop and parking lot.</li>
       </ul>
     </div>
+
+    <div class="infocard hills">
+      <h3>🧝 Elf Scavenger Hunt</h3>
+      <p><b>${esc(CONFIG.elf.dates)}</b></p>
+      <p>Real elves are hiding in shop windows all over Uptown! Find ${CONFIG.elf.goal}, write their names on your game card and turn it in at ${esc(turnIn)} by Dec. 18 for a chance to win one of five $150 gift cards. Track your finds in the Elf Hunt tab.</p>
+    </div>
+
+    <div class="infocard wealthy">
+      <h3>🚋 The Jolly Trolley</h3>
+      <p>FREE rides looping through all four districts on Shop Hop night.</p>
+      <p><b>⏰ ${esc(CONFIG.trolleyLastCall)}</b></p>
+    </div>
+
 
     <div class="btnrow"><button class="btn primary" data-close="info">Start exploring</button></div>
     <div class="btnrow">
