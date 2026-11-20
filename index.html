@@ -29,7 +29,9 @@
     box-shadow:0 4px 18px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:space-between;gap:10px}
   .brand{font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--evergreen);font-size:17px;line-height:1.1}
   .brand small{display:block;color:var(--santa);font-size:12px;letter-spacing:.08em}
-  .status{font-size:12px;color:var(--muted);text-align:right;line-height:1.3}
+  .status{font-size:12px;color:var(--muted);text-align:right;line-height:1.3;flex:1;min-width:0}
+  .infobtn{flex:none;width:40px;height:40px;border-radius:50%;border:0;background:var(--evergreen);color:#fff;font-family:Georgia,serif;font-style:italic;
+    font-weight:700;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.15)}
 
   /* Filter button under the header */
   .filters{position:fixed;z-index:1000;left:12px;top:calc(max(12px,env(safe-area-inset-top)) + 82px)}
@@ -149,6 +151,27 @@
   .detail{font-size:12px;color:var(--muted);margin-top:4px;overflow-wrap:anywhere}
   .detail a{color:var(--evergreen);font-weight:700}
   .grouphead{margin-top:14px}
+
+  /* Welcome / info sheet */
+  .welcome-art{display:block;height:170px;width:auto;margin:6px auto 2px}
+  .social{display:flex;justify-content:center;gap:14px;margin-top:16px}
+  .social a{width:46px;height:46px;border-radius:50%;background:var(--evergreen);color:#fff;display:flex;align-items:center;justify-content:center}
+  .social svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .welcome-title{font-size:26px;font-weight:700;text-align:center;color:var(--evergreen);text-transform:uppercase;letter-spacing:.04em;line-height:1.1;margin:8px 0 6px}
+  .lede{font-size:15px;line-height:1.45;text-align:center;margin:0 4px 6px}
+  .infocard{background:#f4f8f2;border-radius:16px;padding:12px 14px;margin-top:10px;font-size:14px;line-height:1.45}
+  .infocard h3{margin:0 0 4px;font-size:16px}
+  .infocard p{margin:4px 0 0}
+  .infocard ul{margin:4px 0 0;padding-left:18px}
+  .infocard.elf{background:#fff3c4}
+  .infocard.troll{background:#e9f6ee}
+  .btnrow{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .btnrow .btn{text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px}
+
+  /* Businesses list */
+  .search{width:100%;height:44px;border:1px solid #d4dbd6;border-radius:12px;padding:0 12px;font-family:inherit;font-size:16px;color:var(--ink);background:#fff;margin-top:10px}
+  .bizmeta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:4px}
+  .dist{font-size:12px;color:var(--muted);font-weight:700}
 </style>
 </head>
 <body>
@@ -158,6 +181,7 @@
 <div class="header">
   <div class="brand">Uptown<br>Shop Hop<small>Thu, Dec 3 · 3–9 PM</small></div>
   <div class="status" id="status">Loading shops…</div>
+  <button class="infobtn" id="infoBtn" aria-label="About Shop Hop and how to use this map">i</button>
 </div>
 
 <div class="filters">
@@ -173,10 +197,12 @@
 <div class="sheet tall" id="trollSheet" aria-live="polite"></div>
 <div class="sheet tall" id="parkSheet" aria-live="polite"></div>
 <div class="sheet tall" id="entSheet" aria-live="polite"></div>
+<div class="sheet tall" id="bizSheet" aria-live="polite"></div>
+<div class="sheet tall" id="infoSheet"></div>
 
 <nav class="tabbar">
   <div class="tabrow">
-    <button class="tab on" id="tabMap">🗺 Map</button>
+    <button class="tab" id="tabBiz">🛍 Businesses</button>
     <button class="tab" id="tabElf">🧝 Elf Hunt</button>
     <button class="tab" id="tabFav">❤️ Favorites</button>
   </div>
@@ -217,6 +243,16 @@ const CONFIG = {
     dates: "Nov 19 – Dec 18",
     turnIn: ["Sticky Fingers", "Vintage Charm"], // used if the sheet has no "Elf Turn-In" column
     email: "events@uptowngr.com",
+  },
+  trolleyLastCall: "Last call for the trolleys is 8:30 PM, and all trolleys return to the Fulton Street Market at 9 PM.",
+  contactEmail: "events@uptowngr.com",
+  newsletterUrl: "https://uptowngr.com/",   // swap in the direct sign-up link when you have it
+  welcomeGraphic: "welcome-gifts.png",
+  trolleyRoutes: "Our trolley transport includes two routes and 15 total stops. Please note that you can transfer to the other line at stops 10 and 11.",
+  social: {
+    facebook: "https://www.facebook.com/uptowngr",
+    instagram: "https://www.instagram.com/uptowngr/",
+    website: "https://uptowngr.com/",
   },
   trolleyInfo: "Trolleys are a fun and festive way to enjoy Uptown, but please do not rely on the trolleys as your main source of transportation, as the demand is incredibly high. Uptown is incredibly walkable, even between districts!",
 };
@@ -880,8 +916,8 @@ function focusDistrict(d) {
    Filters, Trolley, Parking
    ---------------------------------------------------------- */
 let currentBusiness = null;
-const PANELS = ["sheet", "filterSheet", "elfSheet", "favSheet", "trollSheet", "parkSheet", "entSheet"];
-const TAB_IDS = { map: "tabMap", elf: "tabElf", fav: "tabFav", ent: "tabEnt", troll: "tabTroll", park: "tabPark" };
+const PANELS = ["sheet", "filterSheet", "elfSheet", "favSheet", "trollSheet", "parkSheet", "entSheet", "bizSheet", "infoSheet"];
+const TAB_IDS = { biz: "tabBiz", elf: "tabElf", fav: "tabFav", ent: "tabEnt", troll: "tabTroll", park: "tabPark" };
 
 function setTab(which) {
   for (const [k, id] of Object.entries(TAB_IDS)) $("#" + id).classList.toggle("on", k === which);
@@ -892,7 +928,7 @@ function closeAllPanels() {
   currentBusiness = null;
 }
 
-// Back to the map (used by the Map tab and every ✕)
+// Back to the map (used by every ✕); no tab is highlighted on the plain map
 function goMap() {
   closeAllPanels();
   setTab("map");
@@ -1023,6 +1059,7 @@ function toggleFav(item) {
   if ($("#trollSheet").classList.contains("open")) renderTrolleyList();
   if ($("#parkSheet").classList.contains("open")) renderParkingList();
   if ($("#entSheet").classList.contains("open")) renderEntList();
+  if ($("#bizSheet").classList.contains("open")) renderBizResults();
 }
 
 /* ----------------------------------------------------------
@@ -1183,12 +1220,203 @@ function renderEntList() {
     <div class="elflist">${body || `<div class="empty">Entertainment will show up here once it's announced.</div>`}</div>`;
 }
 
+/* ----------------------------------------------------------
+   Businesses tab: full list with its own search, filters, and sort
+   (separate from the map's Filters, so browsing here doesn't change the map)
+   ---------------------------------------------------------- */
+const bizView = { q: "", district: "All", category: "All", elf: false, events: false, favs: false, sort: "az" };
+
+function distanceTo(b) {
+  if (!loc.dot || b.lat == null) return null;
+  return map.distance(loc.dot.getLatLng(), [b.lat, b.lng]);   // meters
+}
+function distanceText(m) {
+  const mi = m / 1609.34;
+  return mi < 0.1 ? `${Math.round(m * 3.281 / 10) * 10} ft` : `${mi.toFixed(1)} mi`;
+}
+
+function bizRow(b, names, favs) {
+  const c = colorFor(b.district);
+  const d = bizView.sort === "near" ? distanceTo(b) : null;
+  let elfNote = "";
+  if (b.elf) elfNote = names[b.id] ? '<span class="found-tag">🧝 ✓ Found</span>' : '<span class="small">🧝 Elf Hunt</span>';
+  return `
+    <div class="elfrow">
+      <div class="top">
+        <div>
+          <div class="elfname">${esc(b.name)}</div>
+          <div class="bizmeta">
+            <span class="pill" style="background:${c.color};color:${c.text}">${esc(b.district)}</span>
+            <span class="cat" style="font-size:12px">${esc(b.category)}</span>
+            ${elfNote}
+            ${b.hasEvent ? '<span class="small">🎉 Shop Hop special</span>' : ""}
+          </div>
+          ${b.hours ? `<div class="detail">🕒 ${esc(b.hours)}</div>` : ""}
+          ${d != null ? `<div class="detail">📍 ${distanceText(d)} away</div>` : ""}
+        </div>
+        <div class="side">
+          <button class="btn small" data-show="${b.id}">📍 Show on map</button>
+          <button class="btn small" data-fav="${b.id}" aria-label="Save to favorites">${favs.has(b.id) ? "❤️" : "🤍"}</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function bizListItems() {
+  const favs = getFavs();
+  const q = bizView.q.trim().toLowerCase();
+  const list = businesses.filter(b =>
+    (bizView.district === "All" || b.district === bizView.district) &&
+    (bizView.category === "All" || b.category === bizView.category) &&
+    (!bizView.elf || b.elf) && (!bizView.events || b.hasEvent) && (!bizView.favs || favs.has(b.id)) &&
+    (!q || `${b.name} ${b.category} ${b.promo} ${b.address}`.toLowerCase().includes(q)));
+  const az = (a, b) => a.name.localeCompare(b.name);
+  if (bizView.sort === "district") {
+    const rank = d => { const i = DISTRICT_ORDER.indexOf(d); return i < 0 ? 99 : i; };
+    list.sort((a, b) => rank(a.district) - rank(b.district) || az(a, b));
+  } else if (bizView.sort === "near" && loc.dot) {
+    list.sort((a, b) => (distanceTo(a) ?? 1e9) - (distanceTo(b) ?? 1e9));
+  } else list.sort(az);
+  return list;
+}
+
+// Only the results redraw while typing, so the search box keeps focus
+function renderBizResults() {
+  const list = bizListItems();
+  const names = getElves(), favs = getFavs();
+  let body;
+  if (!list.length) body = `<div class="empty">No businesses match. Try clearing a filter.</div>`;
+  else if (bizView.sort === "district") {
+    body = [...new Set(list.map(b => b.district))].map(d =>
+      `<div class="flabel grouphead">${esc(d)}</div>` + list.filter(b => b.district === d).map(b => bizRow(b, names, favs)).join("")).join("");
+  } else body = list.map(b => bizRow(b, names, favs)).join("");
+  const waiting = bizView.sort === "near" && !loc.dot ? `<div class="small" style="margin-top:8px">Finding your location…</div>` : "";
+  $("#bizCount").textContent = `${list.length} of ${businesses.length}`;
+  $("#bizResults").innerHTML = waiting + body;
+}
+
+function renderBizList() {
+  const chips = ["All", ...DISTRICT_ORDER].map(d => {
+    const on = bizView.district === d;
+    const c = d === "All" ? null : colorFor(d);
+    const style = on && c ? `background:${c.color};color:${c.text}` : "";
+    return `<button class="chip ${on ? "on" : ""}" data-bdistrict="${d}" style="${style}">${d === "All" ? "All districts" : esc(d)}</button>`;
+  }).join("");
+  const toggles = [["elf", "🧝 Elf Hunt"], ["events", "🎉 Specials"], ["favs", "❤️ Favorites"]]
+    .map(([k, label]) => `<button class="chip ${bizView[k] ? "on" : ""}" data-btoggle="${k}">${label}</button>`).join("");
+  const sorts = [["az", "A–Z"], ["district", "By district"], ["near", "Nearest"]]
+    .map(([k, label]) => `<button data-bsort="${k}" class="${bizView.sort === k ? "on" : ""}">${label}</button>`).join("");
+  $("#bizSheet").innerHTML = `
+    <button class="xbtn" data-close="biz" aria-label="Back to map">✕</button>
+    <div class="grab"></div>
+    <div class="name">🛍 Businesses <span class="small" id="bizCount"></span></div>
+    <input class="search" id="bizSearch" type="search" placeholder="Search shops, food, gifts…" value="${esc(bizView.q)}" autocomplete="off">
+    <div class="chips" style="margin-top:10px">${chips}</div>
+    <div class="chips" style="margin-top:6px">${toggles}</div>
+    <select class="field" id="bizCat" style="margin-top:8px">
+      <option value="All">All categories</option>
+      ${CONFIG.categories.map(c => `<option value="${esc(c)}" ${bizView.category === c ? "selected" : ""}>${esc(c)}</option>`).join("")}
+    </select>
+    <div class="seg">${sorts}</div>
+    <div class="elflist" id="bizResults"></div>`;
+  $("#bizSearch").oninput = e => { bizView.q = e.target.value; renderBizResults(); };
+  $("#bizCat").onchange = e => { bizView.category = e.target.value; renderBizResults(); };
+  renderBizResults();
+}
+
+$("#bizSheet").addEventListener("click", e => {
+  const t = e.target.closest("button");
+  if (!t) return;
+  if (t.dataset.bdistrict) { bizView.district = t.dataset.bdistrict; renderBizList(); return; }
+  if (t.dataset.btoggle) { bizView[t.dataset.btoggle] = !bizView[t.dataset.btoggle]; renderBizList(); return; }
+  if (t.dataset.bsort) {
+    bizView.sort = t.dataset.bsort;
+    if (bizView.sort === "near" && !loc.dot) requestLocation(false);
+    renderBizList();
+  }
+});
+
+function openBiz() {
+  closeAllPanels();
+  renderBizList();
+  $("#bizSheet").classList.add("open");
+  setTab("biz");
+}
+
+/* ----------------------------------------------------------
+   Info / welcome sheet (ⓘ in the header; opens by itself on a first visit)
+   ---------------------------------------------------------- */
+const WELCOME_KEY = "shophop.welcomed.v1";
+function renderInfo() {
+  const turnIn = CONFIG.elf.turnIn.join(" or ");
+  $("#infoSheet").innerHTML = `
+    <button class="xbtn" data-close="info" aria-label="Close">✕</button>
+    <div class="grab"></div>
+    <img class="welcome-art" src="${esc(CONFIG.welcomeGraphic)}" alt="A stack of wrapped holiday gifts">
+    <div class="welcome-title">Uptown Shop Hop</div>
+    <p class="lede">Uptown's favorite holiday tradition is back for year 29! Spend a festive night shopping local, grabbing a bite and catching live entertainment across all four Uptown districts: Eastown, East Fulton, East Hills and Wealthy Street. 🎄</p>
+
+    <div class="infocard">
+      <h3>🗓 Shop Hop night</h3>
+      <p><b>Thursday, Dec. 3 · 3–9 PM</b></p>
+      <p>🛍 Local shops · 🍽 Food + drinks · 🎶 Entertainment · 🔔 Sleighbell Swing at the Fulton Street Market · 🎄 Eastown Tree Lighting at Harmony, 8 PM</p>
+    </div>
+
+    <div class="infocard elf">
+      <h3>🧝 Elf Scavenger Hunt</h3>
+      <p><b>${esc(CONFIG.elf.dates)}</b></p>
+      <p>Real elves are hiding in shop windows all over Uptown! Find ${CONFIG.elf.goal}, write their names on your game card and turn it in at ${esc(turnIn)} by Dec. 18 for a chance to win one of five $150 gift cards. Track your finds in the Elf Hunt tab.</p>
+    </div>
+
+    <div class="infocard troll">
+      <h3>🚋 The Jolly Trolley</h3>
+      <p>FREE rides looping through all four districts on Shop Hop night.</p>
+      <p><b>⏰ ${esc(CONFIG.trolleyLastCall)}</b></p>
+    </div>
+
+    <div class="infocard">
+      <h3>📱 How to use this map</h3>
+      <ul>
+        <li>Tap any pin for hours, specials and directions.</li>
+        <li>Tap 🤍 to save favorites. They stay on this phone.</li>
+        <li><b>Filters</b> narrows the map by district, category or Elf Hunt.</li>
+        <li>📍 shows where you are (we only ask when you tap it).</li>
+        <li>The tabs below list every business, entertainment, trolley stop and parking lot.</li>
+      </ul>
+    </div>
+
+    <div class="btnrow">
+      <a class="btn" href="mailto:${esc(CONFIG.contactEmail)}?subject=${encodeURIComponent("Shop Hop question")}">✉️ Email us</a>
+      <a class="btn" href="${esc(CONFIG.newsletterUrl)}" target="_blank" rel="noopener">📰 Get our newsletter</a>
+    </div>
+    <div class="btnrow"><button class="btn primary" data-close="info">Start exploring</button></div>
+    <div class="social">
+      <a href="${esc(CONFIG.social.facebook)}" target="_blank" rel="noopener" aria-label="Uptown GR on Facebook" title="Facebook">
+        <svg viewBox="0 0 24 24"><path d="M15 3h-2.5A3.5 3.5 0 0 0 9 6.5V10H6.5v3.5H9V21h3.5v-7.5H15l.5-3.5h-3V7a1 1 0 0 1 1-1H15z" fill="currentColor" stroke="none"/></svg></a>
+      <a href="${esc(CONFIG.social.instagram)}" target="_blank" rel="noopener" aria-label="Uptown GR on Instagram" title="Instagram">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1" fill="currentColor" stroke="none"/></svg></a>
+      <a href="${esc(CONFIG.social.website)}" target="_blank" rel="noopener" aria-label="Uptown GR website" title="uptowngr.com">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></a>
+    </div>
+    <div class="small" style="text-align:center;margin:10px 0 4px">#UptownShopHop · #ShopLocalGR · #UptownGR</div>`;
+}
+
+function openInfo() {
+  closeAllPanels();
+  renderInfo();
+  $("#infoSheet").scrollTop = 0;
+  $("#infoSheet").classList.add("open");
+  setTab("none");
+  try { localStorage.setItem(WELCOME_KEY, "1"); } catch (e) {}
+}
+
 function renderTrolleyList() {
   const list = placesOf("troll").sort((a, b) => Number(a.num) - Number(b.num));
   $("#trollSheet").innerHTML = `
     <button class="xbtn" data-close="troll" aria-label="Back to map">✕</button>
     <div class="grab"></div>
     <div class="name">🚋 Trolley Stops</div>
+    <div class="notice"><b>⏰ ${esc(CONFIG.trolleyLastCall)}</b><p>🔄 ${esc(CONFIG.trolleyRoutes)}</p></div>
     <div class="notice">${esc(CONFIG.trolleyInfo)}</div>
     <div class="elflist">${list.length ? list.map(placeRow).join("") : `<div class="empty">Trolley stops will show up here once they're connected.</div>`}</div>`;
 }
@@ -1318,7 +1546,7 @@ function onListClick(e) {
   const fav = e.target.closest("[data-fav]");
   if (fav) { const item = byId.get(fav.dataset.fav); if (item) toggleFav(item); }
 }
-for (const id of ["favSheet", "trollSheet", "parkSheet", "entSheet"]) $("#" + id).addEventListener("click", onListClick);
+for (const id of ["favSheet", "trollSheet", "parkSheet", "entSheet", "bizSheet"]) $("#" + id).addEventListener("click", onListClick);
 
 // Every ✕ in the panels returns to the map
 document.addEventListener("click", e => {
@@ -1337,14 +1565,15 @@ function addSwipeToClose(el, onClose) {
   });
 }
 addSwipeToClose($("#sheet"), closeSheet);
-for (const id of ["filterSheet", "elfSheet", "favSheet", "trollSheet", "parkSheet", "entSheet"]) {
+for (const id of ["filterSheet", "elfSheet", "favSheet", "trollSheet", "parkSheet", "entSheet", "bizSheet", "infoSheet"]) {
   addSwipeToClose($("#" + id), goMap);
 }
 map.on("click", closeSheet);
 
-$("#tabMap").onclick = goMap;
 $("#tabElf").onclick = openElf;
 $("#tabFav").onclick = openFav;
+$("#tabBiz").onclick = openBiz;
+$("#infoBtn").onclick = openInfo;
 $("#tabEnt").onclick = openEnt;
 $("#tabTroll").onclick = openTrolley;
 $("#tabPark").onclick = openParking;
@@ -1370,6 +1599,7 @@ function onPosition(pos) {
   const here = [lat, lng];
   $("#locBtn").classList.remove("busy");
   $("#locBtn").classList.add("on");
+  const firstFix = !loc.dot;
   if (!loc.dot) {
     loc.ring = L.circle(here, { radius: accuracy, color: "#1a73e8", weight: 1, opacity: .4, fillOpacity: .1, interactive: false }).addTo(map);
     loc.dot = L.marker(here, {
@@ -1380,6 +1610,7 @@ function onPosition(pos) {
     loc.dot.setLatLng(here);
     loc.ring.setLatLng(here).setRadius(accuracy);
   }
+  if (firstFix && bizView.sort === "near" && $("#bizSheet").classList.contains("open")) renderBizResults();
   if (loc.centerNext) {
     loc.centerNext = false;
     if (map.distance(here, CONFIG.center) > CONFIG.nearbyMiles * 1609.34) {
@@ -1410,6 +1641,15 @@ function startLocation() {
 function stopLocation() {
   if (loc.watchId != null) navigator.geolocation.clearWatch(loc.watchId);
   loc.watchId = null;
+}
+
+// Turn location on from a tap. center: fly the map to the person once found.
+function requestLocation(center) {
+  if (!("geolocation" in navigator)) { toast("This browser can't share your location."); return; }
+  loc.wanted = true;
+  loc.centerNext = center;
+  $("#locBtn").classList.add("busy");
+  startLocation();
 }
 
 $("#locBtn").onclick = () => {
@@ -1456,10 +1696,13 @@ async function init() {
   if ($("#trollSheet").classList.contains("open")) renderTrolleyList();
   if ($("#parkSheet").classList.contains("open")) renderParkingList();
   if ($("#entSheet").classList.contains("open")) renderEntList();
+  if ($("#bizSheet").classList.contains("open") && document.activeElement?.id !== "bizSearch") renderBizResults();
   firstLoad = false;
 }
 
 // Route lines load once (they don't change during the event), then add their Filters toggle
+// First visit: show the welcome screen
+try { if (!localStorage.getItem(WELCOME_KEY)) openInfo(); } catch (e) {}
 loadRoutes().then(() => { renderRoutes(); if (businesses.length) buildFilters(); });
 init();
 setInterval(init, CONFIG.refreshMinutes * 60 * 1000);
