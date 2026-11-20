@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Uptown Shop Hop Map</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
@@ -65,6 +68,8 @@
   .tabrow{display:flex;gap:4px}
   .tab{flex:1;min-width:0;border:0;background:transparent;border-radius:999px;padding:9px 6px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .tab.on{background:var(--evergreen);color:#fff}
+  .tab#tabEnt{flex:1.45}
+  @media (max-width:400px){ .tab{font-size:13px;padding:9px 3px} }
 
   /* Map pins */
   .pin{position:relative;width:34px;height:34px}
@@ -84,6 +89,8 @@
     color:#fff;font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif}
   .pk.free{background:var(--blue)}
   .pk.paid{background:var(--paid);color:var(--ink)}
+  .ent{position:relative;width:32px;height:32px;border-radius:50%;border:3px solid #fff;display:flex;align-items:center;justify-content:center;
+    font-size:16px;box-shadow:0 2px 6px rgba(0,0,0,.3)}
   .tr{position:relative;width:32px;height:32px;border-radius:50%;background:#fff;border:4px solid #999;display:flex;align-items:center;justify-content:center;
     font-size:15px;box-shadow:0 2px 6px rgba(0,0,0,.3)}
 
@@ -165,6 +172,7 @@
 <div class="sheet tall" id="favSheet" aria-live="polite"></div>
 <div class="sheet tall" id="trollSheet" aria-live="polite"></div>
 <div class="sheet tall" id="parkSheet" aria-live="polite"></div>
+<div class="sheet tall" id="entSheet" aria-live="polite"></div>
 
 <nav class="tabbar">
   <div class="tabrow">
@@ -173,6 +181,7 @@
     <button class="tab" id="tabFav">❤️ Favorites</button>
   </div>
   <div class="tabrow">
+    <button class="tab" id="tabEnt">🎭 Entertainment</button>
     <button class="tab" id="tabTroll">🚋 Trolley</button>
     <button class="tab" id="tabPark">🅿️ Parking</button>
   </div>
@@ -189,6 +198,7 @@ const CONFIG = {
   businessesCsv: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRt0Fie1CF7DBCj77kSxKlNxjfzG0xoLZ-FyWmix1f84PHqTDbIjcq-fFeCqkxtMz_SrlYrOBNW1nkm/pub?gid=2137669598&single=true&output=csv",
   // "Trolley Stops" and "Parking" tabs, each published as CSV
   trolleyCsv: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRt0Fie1CF7DBCj77kSxKlNxjfzG0xoLZ-FyWmix1f84PHqTDbIjcq-fFeCqkxtMz_SrlYrOBNW1nkm/pub?gid=0&single=true&output=csv",
+  entertainmentCsv: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRt0Fie1CF7DBCj77kSxKlNxjfzG0xoLZ-FyWmix1f84PHqTDbIjcq-fFeCqkxtMz_SrlYrOBNW1nkm/pub?gid=1097082024&single=true&output=csv",
   parkingCsv: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRt0Fie1CF7DBCj77kSxKlNxjfzG0xoLZ-FyWmix1f84PHqTDbIjcq-fFeCqkxtMz_SrlYrOBNW1nkm/pub?gid=1228700567&single=true&output=csv",
   tiles: "https://api.maptiler.com/maps/streets-v4/256/{z}/{x}/{y}.png?key=FvkmfrRMhQ3DpBY6YwvK",
   attribution: '<a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">&copy; OpenStreetMap contributors</a>',
@@ -196,6 +206,7 @@ const CONFIG = {
   zoom: 14,
   labelZoom: 16,          // business names appear at this zoom and closer
   refreshMinutes: 5,
+  nearbyMiles: 3,         // farther than this from Uptown, the 📍 button won't move the map
   // Trolley route lines, exported from Google My Maps as KML. Layer or line names
   // must contain "Green" or "Red" to pick up that route's color.
   routesKml: "routes.kml",
@@ -211,7 +222,7 @@ const CONFIG = {
 };
 
 const CACHE_KEY = "shophop.businesses.v1";
-const PLACES_CACHE_KEY = "shophop.places.v1";
+const PLACES_CACHE_KEY = "shophop.places.v2";
 const FAV_KEY = "shophop.favs.v1";
 const ELF_KEY = "shophop.elves.v1";
 const LINE_COLOR = { Green: "#00B050", Red: "#e73221" };
@@ -402,6 +413,48 @@ function toPlaces(rows) {
   return out;
 }
 
+// Entertainment tab: one row per performance or activation
+function toEntertainment(rows) {
+  const head = normHeaders(rows);
+  const find = pred => head.findIndex(pred);
+  const idx = {
+    district: find(h => h === "district"),
+    name: find(h => h === "entertainment" || h === "name"),
+    time: find(h => h === "time" || h === "times"),
+    desc: find(h => h.startsWith("description")),
+    location: find(h => h === "location"),
+    address: find(h => h === "address"),
+    coords: find(h => h.includes("coord") || h.includes("lat")),
+  };
+  const seen = new Map();
+  const out = [];
+  for (const r of rows.slice(1)) {
+    const get = i => (i >= 0 && r[i] != null ? r[i].trim() : "");
+    const name = get(idx.name);
+    if (!name) continue;
+    let id = "e-" + slug(name);
+    const n = (seen.get(id) || 0) + 1; seen.set(id, n);
+    if (n > 1) id += "-" + n;
+    const ll = parseCoords(get(idx.coords));
+    out.push({
+      kind: "ent", id, name,
+      district: normDistrict(get(idx.district)),
+      time: get(idx.time), desc: get(idx.desc), location: get(idx.location), address: get(idx.address),
+      lat: ll ? ll[0] : null, lng: ll ? ll[1] : null,
+    });
+  }
+  return out;
+}
+
+// "6-8pm" → 18, "3:30–5pm" → 15.5; used only to sort the list. Event runs 3–9 pm.
+function startHour(t) {
+  const m = String(t).match(/(\d{1,2})(?::(\d{2}))?/);
+  if (!m) return 99;
+  let h = Number(m[1]) + (m[2] ? Number(m[2]) / 60 : 0);
+  if (h < 10 && !/^\s*\d{1,2}(:\d{2})?\s*am/i.test(t)) h += 12;
+  return h;
+}
+
 async function loadBusinesses() {
   try {
     const res = await fetch(CONFIG.businessesCsv, { cache: "no-store" });
@@ -420,16 +473,17 @@ async function loadBusinesses() {
   }
 }
 
-async function fetchTab(url) {
+async function fetchTab(url, parse = toPlaces) {
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error("HTTP " + res.status);
-  return toPlaces(parseCSV(await res.text()));
+  return parse(parseCSV(await res.text()));
 }
 
-// Each tab loads on its own, so one failing tab doesn't hide the other
+// Each tab loads on its own, so one failing tab doesn't hide the others
 async function loadPlaces() {
-  const results = await Promise.allSettled([fetchTab(CONFIG.trolleyCsv), fetchTab(CONFIG.parkingCsv)]);
-  results.forEach((r, i) => { if (r.status === "rejected") console.warn(["Trolley", "Parking"][i] + " tab failed:", r.reason); });
+  const results = await Promise.allSettled([
+    fetchTab(CONFIG.trolleyCsv), fetchTab(CONFIG.parkingCsv), fetchTab(CONFIG.entertainmentCsv, toEntertainment)]);
+  results.forEach((r, i) => { if (r.status === "rejected") console.warn(["Trolley", "Parking", "Entertainment"][i] + " tab failed:", r.reason); });
   if (results.some(r => r.status === "fulfilled")) {
     const list = results.filter(r => r.status === "fulfilled").flatMap(r => r.value);
     try { localStorage.setItem(PLACES_CACHE_KEY, JSON.stringify(list)); } catch (e) {}
@@ -491,6 +545,7 @@ map.addLayer(cluster);
 // Parking and trolley pins sit on their own layers so they never get hidden in a business cluster
 const routeLayer = L.layerGroup().addTo(map);   // faint route lines, under all pins
 const parkLayer = L.layerGroup().addTo(map);
+const entLayer = L.layerGroup().addTo(map);
 const trollLayer = L.layerGroup().addTo(map);
 
 function updateLabelMode() {
@@ -518,6 +573,14 @@ function parkIcon(p) {
   return L.divIcon({
     className: "", iconSize: [30, 30], iconAnchor: [15, 15],
     html: `<div class="pk ${p.paid ? "paid" : "free"}">P</div>`,
+  });
+}
+
+function entIcon(e) {
+  const c = colorFor(e.district);
+  return L.divIcon({
+    className: "", iconSize: [32, 32], iconAnchor: [16, 16],
+    html: `<div class="ent" style="background:${c.color}">🎭<span class="pin-label">${esc(e.name)}</span></div>`,
   });
 }
 
@@ -561,7 +624,7 @@ function updateLabelCollisions() {
    ---------------------------------------------------------- */
 const filterState = {
   district: "All", category: "All", elf: false, events: false, favOnly: false,
-  layers: { park: true, troll: true, routes: true },
+  layers: { park: true, troll: true, routes: true, ent: true },
 };
 let businesses = [];
 let places = [];
@@ -647,6 +710,7 @@ function renderLayers() {
   renderRoutes();
   parkLayer.clearLayers();
   trollLayer.clearLayers();
+  entLayer.clearLayers();
   const favs = getFavs();
   const keep = p => !filterState.favOnly || favs.has(p.id);
   if (filterState.layers.park) {
@@ -654,6 +718,14 @@ function renderLayers() {
       if (p.lat == null || !keep(p)) continue;
       L.marker([p.lat, p.lng], { icon: parkIcon(p), title: p.name, zIndexOffset: 1000 })
         .on("click", () => openPlaceCard(p)).addTo(parkLayer);
+    }
+  }
+  if (filterState.layers.ent) {
+    for (const e of placesOf("ent")) {
+      if (e.lat == null || !keep(e)) continue;
+      if (filterState.district !== "All" && e.district !== filterState.district) continue;
+      L.marker([e.lat, e.lng], { icon: entIcon(e), title: e.name, zIndexOffset: 900 })
+        .on("click", () => openPlaceCard(e)).addTo(entLayer);
     }
   }
   if (filterState.layers.troll) {
@@ -694,6 +766,7 @@ function buildFilters() {
     favs: favItems().length,
     park: placesOf("park").length,
     troll: placesOf("troll").length,
+    ent: placesOf("ent").length,
   };
 
   const sheet = $("#filterSheet");
@@ -753,6 +826,10 @@ function buildFilters() {
 
   // Layers are on/off and don't count as filters
   const ly = $("#fLayers");
+  ly.appendChild(chip(`🎭 Entertainment (${counts.ent})`, {
+    on: filterState.layers.ent,
+    onClick: () => setFilter(() => { filterState.layers.ent = !filterState.layers.ent; }, false),
+  }));
   ly.appendChild(chip(`🅿️ Parking (${counts.park})`, {
     on: filterState.layers.park,
     onClick: () => setFilter(() => { filterState.layers.park = !filterState.layers.park; }, false),
@@ -803,8 +880,8 @@ function focusDistrict(d) {
    Filters, Trolley, Parking
    ---------------------------------------------------------- */
 let currentBusiness = null;
-const PANELS = ["sheet", "filterSheet", "elfSheet", "favSheet", "trollSheet", "parkSheet"];
-const TAB_IDS = { map: "tabMap", elf: "tabElf", fav: "tabFav", troll: "tabTroll", park: "tabPark" };
+const PANELS = ["sheet", "filterSheet", "elfSheet", "favSheet", "trollSheet", "parkSheet", "entSheet"];
+const TAB_IDS = { map: "tabMap", elf: "tabElf", fav: "tabFav", ent: "tabEnt", troll: "tabTroll", park: "tabPark" };
 
 function setTab(which) {
   for (const [k, id] of Object.entries(TAB_IDS)) $("#" + id).classList.toggle("on", k === which);
@@ -889,6 +966,10 @@ function closeSheet() {
    Trolley stop and parking lot cards
    ---------------------------------------------------------- */
 function placePills(p) {
+  if (p.kind === "ent") {
+    const c = colorFor(p.district);
+    return `<span class="pill" style="background:${c.color};color:${c.text}">${esc(p.district)}</span><span class="cat">Entertainment</span>`;
+  }
   if (p.kind === "troll") {
     const color = LINE_COLOR[p.lineName] || "#999";
     return `<span class="pill" style="background:${color}">${esc(p.lineName || "Trolley")} line</span>` +
@@ -912,7 +993,10 @@ function openPlaceCard(p) {
       <button class="heart" id="fav" aria-label="Save to favorites">${isFav ? "❤️" : "🤍"}</button>
     </div>
     ${p.kind === "troll" && p.freePark ? `<div class="row"><span class="pill" style="background:var(--blue)">Free parking near this stop</span></div>` : ""}
+    ${p.kind === "ent" && p.time ? `<div class="row">🕒 ${esc(p.time)}</div>` : ""}
+    ${p.kind === "ent" && p.location ? `<div class="row">📌 ${esc(p.location)}</div>` : ""}
     ${p.address ? `<a class="addr" href="${mapsUrl(p)}">📍 ${esc(p.address)}</a>` : ""}
+    ${p.kind === "ent" && p.desc ? `<div class="promo">${esc(p.desc)}</div>` : ""}
     ${p.closest ? `<div class="row">Closest business: ${esc(p.closest)}</div>` : ""}
     ${p.kind === "troll" && p.spots.length ? `<div class="row">Parking spots: ${esc(p.spots.join(", "))}</div>` : ""}`;
   $("#closeCard").onclick = closeSheet;
@@ -938,6 +1022,7 @@ function toggleFav(item) {
   if ($("#favSheet").classList.contains("open")) renderFavList();
   if ($("#trollSheet").classList.contains("open")) renderTrolleyList();
   if ($("#parkSheet").classList.contains("open")) renderParkingList();
+  if ($("#entSheet").classList.contains("open")) renderEntList();
 }
 
 /* ----------------------------------------------------------
@@ -1063,6 +1148,41 @@ function placeRow(p) {
     </div>`;
 }
 
+function entRow(e) {
+  return `
+    <div class="elfrow">
+      <div class="top">
+        <div>
+          <div class="elfname">${esc(e.name)}</div>
+          <div class="row" style="margin-top:4px">${placePills(e)}</div>
+          ${e.time ? `<div class="detail">🕒 ${esc(e.time)}</div>` : ""}
+          ${e.location ? `<div class="detail">📌 ${esc(e.location)}</div>` : ""}
+          ${e.desc ? `<div class="detail">${esc(e.desc)}</div>` : ""}
+          ${e.address || e.lat != null ? `<div class="detail"><a href="${mapsUrl(e)}">🧭 Directions</a></div>` : ""}
+        </div>
+        <div class="side">
+          ${e.lat != null ? `<button class="btn small" data-show="${e.id}">📍 Show on map</button>` : ""}
+          <button class="btn small" data-fav="${e.id}" aria-label="Save to favorites">${heartLabel(e)}</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+// Grouped by district, earliest start time first
+function renderEntList() {
+  const all = placesOf("ent").sort((a, b) => startHour(a.time) - startHour(b.time) || a.name.localeCompare(b.name));
+  const groups = [...DISTRICT_ORDER, ...new Set(all.map(e => e.district).filter(d => !DISTRICT_ORDER.includes(d)))];
+  const body = groups.map(d => {
+    const items = all.filter(e => e.district === d);
+    return items.length ? `<div class="flabel grouphead">${esc(d)}</div>${items.map(entRow).join("")}` : "";
+  }).join("");
+  $("#entSheet").innerHTML = `
+    <button class="xbtn" data-close="ent" aria-label="Back to map">✕</button>
+    <div class="grab"></div>
+    <div class="name">🎭 Entertainment</div>
+    <div class="elflist">${body || `<div class="empty">Entertainment will show up here once it's announced.</div>`}</div>`;
+}
+
 function renderTrolleyList() {
   const list = placesOf("troll").sort((a, b) => Number(a.num) - Number(b.num));
   $("#trollSheet").innerHTML = `
@@ -1089,11 +1209,12 @@ function renderParkingList() {
 
 function renderFavList() {
   const list = favItems().sort((a, b) => {
-    const order = { biz: 0, troll: 1, park: 2 };
+    const order = { biz: 0, ent: 1, troll: 2, park: 3 };
     return (order[a.kind] - order[b.kind]) || a.name.localeCompare(b.name);
   });
   const names = getElves();
   const rows = list.length ? list.map(item => {
+    if (item.kind === "ent") return entRow(item);
     if (item.kind !== "biz") return placeRow(item);
     const c = colorFor(item.district);
     let elfNote = "";
@@ -1115,7 +1236,7 @@ function renderFavList() {
           </div>
         </div>
       </div>`;
-  }).join("") : `<div class="empty">No favorites yet. Tap 🤍 on any shop, trolley stop, or parking lot to save it here.</div>`;
+  }).join("") : `<div class="empty">No favorites yet. Tap 🤍 on any shop, entertainment, trolley stop, or parking lot to save it here.</div>`;
 
   $("#favSheet").innerHTML = `
     <button class="xbtn" data-close="fav" aria-label="Back to map">✕</button>
@@ -1130,6 +1251,13 @@ function openFav() {
   renderFavList();
   $("#favSheet").classList.add("open");
   setTab("fav");
+}
+
+function openEnt() {
+  closeAllPanels();
+  renderEntList();
+  $("#entSheet").classList.add("open");
+  setTab("ent");
 }
 
 function openTrolley() {
@@ -1190,7 +1318,7 @@ function onListClick(e) {
   const fav = e.target.closest("[data-fav]");
   if (fav) { const item = byId.get(fav.dataset.fav); if (item) toggleFav(item); }
 }
-for (const id of ["favSheet", "trollSheet", "parkSheet"]) $("#" + id).addEventListener("click", onListClick);
+for (const id of ["favSheet", "trollSheet", "parkSheet", "entSheet"]) $("#" + id).addEventListener("click", onListClick);
 
 // Every ✕ in the panels returns to the map
 document.addEventListener("click", e => {
@@ -1209,7 +1337,7 @@ function addSwipeToClose(el, onClose) {
   });
 }
 addSwipeToClose($("#sheet"), closeSheet);
-for (const id of ["filterSheet", "elfSheet", "favSheet", "trollSheet", "parkSheet"]) {
+for (const id of ["filterSheet", "elfSheet", "favSheet", "trollSheet", "parkSheet", "entSheet"]) {
   addSwipeToClose($("#" + id), goMap);
 }
 map.on("click", closeSheet);
@@ -1217,6 +1345,7 @@ map.on("click", closeSheet);
 $("#tabMap").onclick = goMap;
 $("#tabElf").onclick = openElf;
 $("#tabFav").onclick = openFav;
+$("#tabEnt").onclick = openEnt;
 $("#tabTroll").onclick = openTrolley;
 $("#tabPark").onclick = openParking;
 $("#filterBtn").onclick = openFilters;
@@ -1253,7 +1382,7 @@ function onPosition(pos) {
   }
   if (loc.centerNext) {
     loc.centerNext = false;
-    if (map.distance(here, CONFIG.center) > 10000) {
+    if (map.distance(here, CONFIG.center) > CONFIG.nearbyMiles * 1609.34) {
       toast("Your blue dot is on, but you're not in Uptown yet. See you there!");
     } else {
       map.flyTo(here, Math.max(map.getZoom(), 16), { duration: .8 });
@@ -1326,6 +1455,7 @@ async function init() {
   if ($("#favSheet").classList.contains("open")) renderFavList();
   if ($("#trollSheet").classList.contains("open")) renderTrolleyList();
   if ($("#parkSheet").classList.contains("open")) renderParkingList();
+  if ($("#entSheet").classList.contains("open")) renderEntList();
   firstLoad = false;
 }
 
