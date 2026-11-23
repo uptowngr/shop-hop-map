@@ -262,7 +262,9 @@ const CONFIG = {
   // must contain "Green" or "Red" to pick up that route's color.
   routesKml: "routes.kml",
   // Categories offered in the dropdown (rows with other values still show on the map)
-  categories: ["Clothing", "Foodie", "Pamper", "Trinket & Home Improvement", "Event"],
+  // Category menu. Leave empty to build it from the sheet's Category column automatically (A–Z).
+  // To pick the order yourself, list them here, e.g. ["Food & Drink", "Gifts", "Fashion"].
+  categories: [],
   elf: {
     goal: 20,                                  // names needed to turn in
     dates: "Nov 19 – Dec 18",
@@ -299,7 +301,7 @@ const CONFIG = {
     instagram: "https://www.instagram.com/uptowngr/",
     website: "https://uptowngr.com/",
   },
-  trolleyInfo: "Trolleys are a fun and festive way to enjoy Uptown, but please do not rely on the trolleys as your main source of transportation, as the demand is incredibly high. Uptown is incredibly walkable, even between districts!",
+  trolleyInfo: "Trolleys are a fun and festive way to enjoy Uptown, but demand is incredibly high, so please don't count on them as your main way to get around. The good news: Uptown is easy to walk, even between districts!",
 };
 
 const CACHE_KEY = "shophop.businesses.v1";
@@ -398,6 +400,12 @@ function normHeaders(rows) {
 // Cleans up a link cell: full URLs pass through, "site.com" gets https://,
 // and "@handle" (or a bare handle) becomes a profile link when a base is given.
 // Anything else, like a cell that only says "Website", is ignored.
+// Categories for the menus: from CONFIG if listed, otherwise whatever the sheet uses
+function categoryList() {
+  if (CONFIG.categories.length) return CONFIG.categories;
+  return [...new Set(businesses.map(b => b.category).filter(c => c && c !== "Other"))].sort((a, b) => a.localeCompare(b));
+}
+
 function linkUrl(v, handleBase) {
   v = String(v || "").trim();
   if (!v || /^(n\/?a|none|-)$/i.test(v)) return "";
@@ -922,7 +930,9 @@ function buildFilters() {
 
   const sel = $("#fCategory");
   sel.innerHTML = `<option value="All">All categories</option>` +
-    CONFIG.categories.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+    categoryList().map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+  if (filterState.category !== "All" && !categoryList().includes(filterState.category)) filterState.category = "All";
+  if (bizView.category !== "All" && !categoryList().includes(bizView.category)) bizView.category = "All";
   sel.value = filterState.category;
   sel.onchange = () => setFilter(() => { filterState.category = sel.value; }, sel.value !== "All");
 
@@ -1259,7 +1269,7 @@ function renderElfList() {
     <div class="name">🧝 Elf Hunt</div>
     <details class="notice" open>
       <summary>How it works · ${esc(CONFIG.elf.dates)}</summary>
-      <p>Find the elves hiding in participating shop windows, and write each elf's name on your paper game card. Collect ${goal} names.</p>
+      <p>Find the elves hiding inside participating businesses (a few are in windows, but most are tucked away inside), and write each elf's name on your paper game card. Collect ${goal} names.</p>
       <p>Turn in your completed card at <b>${CONFIG.elf.turnIn.join("</b> or <b>")}</b> for a small prize. Entries completed by Dec 18 are also entered into a drawing for one of five $150 gift cards to an Uptown business of your choice.</p>
       <p class="small">Your progress is saved on this phone only. If you switch phones or clear your browser, it will be lost.</p>
     </details>
@@ -1431,7 +1441,7 @@ function renderBizList() {
     <div class="chips" style="margin-top:6px">${toggles}</div>
     <select class="field" id="bizCat" style="margin-top:8px">
       <option value="All">All categories</option>
-      ${CONFIG.categories.map(c => `<option value="${esc(c)}" ${bizView.category === c ? "selected" : ""}>${esc(c)}</option>`).join("")}
+      ${categoryList().map(c => `<option value="${esc(c)}" ${bizView.category === c ? "selected" : ""}>${esc(c)}</option>`).join("")}
     </select>
     <div class="seg">${sorts}</div>
     <div class="elflist" id="bizResults"></div>`;
@@ -1526,7 +1536,7 @@ function renderInfo() {
     <div class="infocard hills">
       <h3>🧝 Elf Scavenger Hunt</h3>
       <p><b>${esc(CONFIG.elf.dates)}</b></p>
-      <p>Real elves are hiding in shop windows all over Uptown! Find ${CONFIG.elf.goal}, write their names on your game card and turn it in at ${esc(turnIn)} by Dec. 18 for a chance to win one of five $150 gift cards. Track your finds in the Elf Hunt tab.</p>
+      <p>Real elves are hiding inside businesses all over Uptown, so look closely! Find ${CONFIG.elf.goal}, write their names on your game card and turn it in at ${esc(turnIn)} by Dec. 18 for a chance to win one of five $150 gift cards. Track your finds in the Elf Hunt tab.</p>
     </div>
 
     <div class="infocard wealthy">
