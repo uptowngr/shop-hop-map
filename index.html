@@ -227,7 +227,7 @@
 
 <nav class="tabbar">
   <div class="tabrow">
-    <button class="tab" id="tabBiz">🛍 Businesses</button>
+    <button class="tab" id="tabBiz">🛍️ Businesses</button>
     <button class="tab" id="tabElf">🧝 Elf Hunt</button>
     <button class="tab" id="tabFav">❤️ Favorites</button>
   </div>
@@ -1099,7 +1099,7 @@ function openSheet(b) {
     ${b.address ? `<a class="addr" href="${mapsUrl(b)}">📍 ${esc(b.address)}</a>` : ""}
     ${linkIcons(b)}
     ${b.promo ? `<div class="promo">${esc(b.promo)}</div>`
-      : b.hasEvent ? `<div class="promo">✨ Shop Hop special happening here. Details coming soon.</div>` : ""}
+      : b.hasEvent ? `<div class="promo">✨️ Shop Hop special happening here. Details coming soon.</div>` : ""}
     ${elfSection(b)}`;
   $("#closeCard").onclick = closeSheet;
   $("#fav").onclick = () => toggleFav(b);
@@ -1425,7 +1425,7 @@ function renderBizList() {
   $("#bizSheet").innerHTML = `
     <button class="xbtn" data-close="biz" aria-label="Back to map">✕</button>
     <div class="grab"></div>
-    <div class="name">🛍 Businesses <span class="small" id="bizCount"></span></div>
+    <div class="name">🛍️ Businesses <span class="small" id="bizCount"></span></div>
     <input class="search" id="bizSearch" type="search" placeholder="Search shops, food, gifts…" value="${esc(bizView.q)}" autocomplete="off">
     <div class="chips" style="margin-top:10px">${chips}</div>
     <div class="chips" style="margin-top:6px">${toggles}</div>
@@ -1507,9 +1507,9 @@ function renderInfo() {
     <p class="lede">Uptown's favorite holiday tradition is back for year 29! Spend a festive night shopping local, grabbing a bite and catching live entertainment across all four Uptown districts: Eastown, East Fulton, East Hills and Wealthy Street. 🎄</p>
 
     <div class="infocard fulton">
-      <h3>🗓 Shop Hop night</h3>
+      <h3>🗓️ Shop Hop night</h3>
       <p><b>Thursday, Dec. 3 · 3–9 PM</b></p>
-      <p>🛍 Local shops · 🍽 Food + drinks · 🎶 Entertainment · 🔔 Sleighbell Swing at the Fulton Street Market · 🎄 Eastown Tree Lighting at Harmony, 8 PM</p>
+      <p>🛍️ Local shops · 🍽️ Food + drinks · 🎶 Entertainment · 🔔 Sleighbell Swing at the Fulton Street Market · 🎄 Eastown Tree Lighting at Harmony, 8 PM</p>
     </div>
 
     <div class="infocard eastown">
@@ -1532,7 +1532,7 @@ function renderInfo() {
     <div class="infocard wealthy">
       <h3>🚋 The Jolly Trolley</h3>
       <p>FREE rides looping through all four districts on Shop Hop night.</p>
-      <p><b>⏰ ${esc(CONFIG.trolleyLastCall)}</b></p>
+      <p><b>⏰️ ${esc(CONFIG.trolleyLastCall)}</b></p>
     </div>
 
 
@@ -1570,7 +1570,7 @@ function renderTrolleyList() {
     <button class="xbtn" data-close="troll" aria-label="Back to map">✕</button>
     <div class="grab"></div>
     <div class="name">🚋 Trolley Stops</div>
-    <div class="notice"><b>⏰ ${esc(CONFIG.trolleyLastCall)}</b><p>🔄 ${esc(CONFIG.trolleyRoutes)}</p></div>
+    <div class="notice"><b>⏰️ ${esc(CONFIG.trolleyLastCall)}</b><p>🔄 ${esc(CONFIG.trolleyRoutes)}</p></div>
     <div class="notice">${esc(CONFIG.trolleyInfo)}</div>
     <div class="elflist">${list.length ? list.map(placeRow).join("") : `<div class="empty">Trolley stops will show up here once they're connected.</div>`}</div>`;
 }
