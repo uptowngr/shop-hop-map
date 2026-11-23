@@ -304,7 +304,7 @@ const CONFIG = {
   trolleyInfo: "Trolleys are a fun and festive way to enjoy Uptown, but demand is incredibly high, so please don't count on them as your main way to get around. The good news: Uptown is easy to walk, even between districts!",
 };
 
-const CACHE_KEY = "shophop.businesses.v1";
+const CACHE_KEY = "shophop.businesses.v2";
 const PLACES_CACHE_KEY = "shophop.places.v2";
 const FAV_KEY = "shophop.favs.v1";
 const ELF_KEY = "shophop.elves.v1";
@@ -403,7 +403,12 @@ function normHeaders(rows) {
 // Categories for the menus: from CONFIG if listed, otherwise whatever the sheet uses
 function categoryList() {
   if (CONFIG.categories.length) return CONFIG.categories;
-  return [...new Set(businesses.map(b => b.category).filter(c => c && c !== "Other"))].sort((a, b) => a.localeCompare(b));
+  return [...new Set(businesses.flatMap(b => b.categories).filter(c => c && c !== "Other"))].sort((a, b) => a.localeCompare(b));
+}
+
+function cats(v) {
+  const list = [...new Set(String(v || "").split(",").map(c => c.trim().replace(/\s+/g, " ")).filter(Boolean))];
+  return list.length ? list : ["Other"];
 }
 
 function linkUrl(v, handleBase) {
@@ -470,7 +475,10 @@ function toBusinesses(rows) {
       id, name,
       address: get(idx.address),
       district: normDistrict(get(idx.district)),
-      category: get(idx.category) || "Other",
+      // A cell can hold several categories separated by commas ("Shopping, Eat / Drink"),
+      // which is how a multiple-selection dropdown publishes them
+      categories: cats(get(idx.category)),
+      category: cats(get(idx.category)).join(" · "),
       elf: /^y/i.test(get(idx.elf)),
       turnIn: /^y/i.test(get(idx.turnIn)) ||
               CONFIG.elf.turnIn.some(t => t.toLowerCase() === name.toLowerCase()),
@@ -758,7 +766,7 @@ const favItems = () => { const f = getFavs(); return [...businesses, ...places].
 function passes(b) {
   const favs = getFavs();
   return (filterState.district === "All" || b.district === filterState.district) &&
-         (filterState.category === "All" || b.category === filterState.category) &&
+         (filterState.category === "All" || b.categories.includes(filterState.category)) &&
          (!filterState.elf || b.elf) &&
          (!filterState.events || b.hasEvent) &&
          (!filterState.favOnly || favs.has(b.id));
@@ -1393,7 +1401,7 @@ function bizListItems() {
   const q = bizView.q.trim().toLowerCase();
   const list = businesses.filter(b =>
     (bizView.district === "All" || b.district === bizView.district) &&
-    (bizView.category === "All" || b.category === bizView.category) &&
+    (bizView.category === "All" || b.categories.includes(bizView.category)) &&
     (!bizView.elf || b.elf) && (!bizView.events || b.hasEvent) && (!bizView.favs || favs.has(b.id)) &&
     (!q || `${b.name} ${b.category} ${b.promo} ${b.address}`.toLowerCase().includes(q)));
   const az = (a, b) => a.name.localeCompare(b.name);
@@ -1562,6 +1570,7 @@ function renderInfo() {
     <div class="small" style="text-align:center;margin:10px 0 4px">#UptownShopHop · #ShopLocalGR · #UptownGR</div>
     ${sponsorsHtml()}
     <div class="small" style="text-align:center;margin:18px 0 2px;font-size:11px">Designed with 💚 by Uptown GR</div>
+    <div class="small" style="text-align:center;margin:0 0 2px;font-size:11px">🤖 We built this map with a little help from AI.<br>The elves are 100% real. 🧝</div>
     <div class="small" style="text-align:center;margin:0 0 6px;font-size:11px">© ${new Date().getFullYear()} Uptown Grand Rapids, Inc.<br>Map data © OpenStreetMap contributors</div>`;
 }
 
