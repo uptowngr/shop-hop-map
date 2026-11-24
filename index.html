@@ -268,7 +268,9 @@ const CONFIG = {
   elf: {
     goal: 20,                                  // names needed to turn in
     dates: "Nov 19 – Dec 18",
-    turnIn: ["Sticky Fingers", "Vintage Charm"], // used if the sheet has no "Elf Turn-In" column
+    // Elf Hunt turn-in spots. This list is the only source: it sets the map badges, the cards,
+    // the Elf Hunt tab and the info screen. Names must match the Business Name in the sheet.
+    turnIn: ["Cocoon Art Space", "Vintage Charm"],
     email: "events@uptowngr.com",
   },
   trolleyLastCall: "Last call for the trolleys is 8:30 PM, and all trolleys return to the Fulton Street Market at 9 PM.",
@@ -446,7 +448,6 @@ function toBusinesses(rows) {
     district: find("district"),
     category: find("category"),
     elf: find("elf hunt"),
-    turnIn: find("elf turn-in", "turn-in", "turn in"),
     hours: find("hours"),
     promo: find("event or promotion", "event / promotion", "event"),
     sponsor: find("sponsor"),
@@ -480,8 +481,7 @@ function toBusinesses(rows) {
       categories: cats(get(idx.category)),
       category: cats(get(idx.category)).join(" · "),
       elf: /^y/i.test(get(idx.elf)),
-      turnIn: /^y/i.test(get(idx.turnIn)) ||
-              CONFIG.elf.turnIn.some(t => t.toLowerCase() === name.toLowerCase()),
+      turnIn: CONFIG.elf.turnIn.some(t => t.toLowerCase() === name.toLowerCase()),
       hours: get(idx.hours),
       hasEvent: /^yes$/i.test(promoRaw) || (!isFlag && promoRaw !== ""),
       promo: isFlag ? "" : promoRaw,
